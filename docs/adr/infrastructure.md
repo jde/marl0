@@ -2,6 +2,17 @@
 
 This document captures all major architectural decisions made during the design of the Marl0 AI pipeline infrastructure.
 
+## 📖 Table of Contents
+
+- [0001 — Record Architecture Decisions](#0001--record-architecture-decisions)
+- [0002 — Use Docker Compose for Service Orchestration](#0002--use-docker-compose-for-service-orchestration)
+- [0003 — Use Makefile for Local Developer Ergonomics](#0003--use-makefile-for-local-developer-ergonomics)
+- [0004 — Select Memgraph as Graph Database](#0004--select-memgraph-as-graph-database)
+- [0005 — Use Kafka as Event Streaming Backbone](#0005--use-kafka-as-event-streaming-backbone)
+- [0006 — Data Directory Management with .gitkeep](#0006--data-directory-management-with-gitkeep)
+- [0007 — Strict Environment-Based Validation Strategy](#0007--strict-environment-based-validation-strategy)
+- [0008 — No Runtime Directory Automation](#0008--no-runtime-directory-automation)
+
 ---
 
 ## 0001 — Record Architecture Decisions
