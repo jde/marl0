@@ -1,0 +1,104 @@
+# Marl0 Node Stack Blueprint
+
+environment:
+  default: dev
+  environments:
+    dev:
+      description: Local development environment, file-based volumes
+      volumes_root: ./docker_data
+    prod:
+      description: Production environment, physical drives and RAM disk
+      volumes:
+        postgres: /mnt/fast_ssd/postgres_data
+        memgraph: /mnt/fast_ssd/memgraph_data
+        lancedb: /mnt/fast_ssd/lancedb_data
+        redis: /mnt/ramdisk/redis_data
+        minio: /mnt/fast_ssd/minio_data
+        grafana: /mnt/fast_ssd/grafana_data
+
+services:
+  app:
+    description: Primary orchestrator (Node.js or Go), entrypoint for workflows
+    roles:
+      - API
+      - Task orchestration
+      - Kafka producers/consumers
+    ports: [4200]
+    source: ./app
+
+  kafka:
+    description: Event streaming backbone
+    roles:
+      - Message broker
+      - Stream transport
+    ports: [4292]
+
+  zookeeper:
+    description: Kafka dependency for broker coordination
+    roles:
+      - Kafka cluster management
+    ports: [4218]
+
+  postgres:
+    description: Structured relational storage for entities and document metadata
+    roles:
+      - Data persistence
+      - Source of truth
+    ports: [4242]
+
+  memgraph:
+    description: Graph database for relationships and real-time alerts
+    roles:
+      - Entity-relationship modeling
+      - Streaming alerts
+    ports: [4287, 4201] # Bolt, Memgraph Lab
+
+  redis:
+    description: Fast in-memory cache and pub/sub system
+    roles:
+      - Caching
+      - Message bus
+    ports: [4279]
+
+  minio:
+    description: S3-compatible object storage for documents and artifacts
+    roles:
+      - Blob storage
+      - Experiment snapshots
+    ports: [4202, 4203] # API, Console
+
+  prometheus:
+    description: Metrics collection system
+    roles:
+      - Service monitoring
+      - Time-series metrics
+    ports: [4204]
+
+  grafana:
+    description: Visualization and dashboards for observability
+    roles:
+      - Dashboarding
+      - Alerts and visualization
+    ports: [4205]
+
+volumes_strategy:
+  - Prefer bind mounts over Docker volumes for data portability
+  - Environments control volume paths via .env files
+  - Production mapped to physical storage (SSD/RAM disk)
+
+ports_strategy:
+  - Avoid common ports by mapping to 42xx range
+  - Prevent local dev conflicts with other services
+
+future_extensions:
+  - Add Prometheus exporters for deeper metrics (Kafka, Postgres, Node.js)
+  - Seed database with initialization scripts
+  - Auto-provision Grafana dashboards
+  - Integrate CI/CD pipeline for build and deploy
+  - Auto-generate service diagrams from this file
+
+notes:
+  - LanceDB is embedded in the Node.js app
+  - This stack is designed for real-time streaming pipelines and deep experimentation.
+  - The system supports full rebuilds and partial injections without data loss.
+  - The stack.yml serves as a declarative single source of truth for automation and AI agents.
