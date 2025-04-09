@@ -18,6 +18,19 @@ services:
       - NODE_ENV=development
     command: ["npm", "run", "dev"]
 
+  ingestor:
+    build:
+      context: ./services/ingestor
+    container_name: ingestor
+    ports:
+      - "3000:3000" # Prometheus metrics
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks:
+      - default
+
+
   kafka:
     image: bitnami/kafka:latest
     ports:
@@ -33,7 +46,12 @@ services:
       - ALLOW_PLAINTEXT_LISTENER=yes
     depends_on:
       - zookeeper
-
+    healthcheck:
+      test: ["CMD", "bash", "-c", "echo > /dev/tcp/localhost/9092"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      
   zookeeper:
     image: bitnami/zookeeper:latest
     environment:
