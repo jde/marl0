@@ -30,6 +30,19 @@ services:
     networks:
       - default
 
+  entity-extractor:
+    build:
+      context: ./services/entity-extractor
+    container_name: entity-extractor
+    ports:
+      - "3001:3000" # Prometheus metrics
+    depends_on:
+      kafka:
+        condition: service_healthy
+      ingestor:
+        condition: service_started
+    networks:
+      - default
 
   kafka:
     image: bitnami/kafka:latest
