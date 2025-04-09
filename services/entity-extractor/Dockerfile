@@ -3,9 +3,17 @@ FROM node:20
 WORKDIR /usr/src/app
 
 COPY package*.json ./
-RUN npm install
-
+COPY prisma ./prisma
 COPY tsconfig.json ./
 COPY src ./src
+COPY .env ./
 
-CMD ["npm", "run", "start"]
+# Install dependencies and generate Prisma client
+RUN npm install
+
+# Build app
+RUN npm run build
+
+EXPOSE 3000
+
+CMD ["npm", "start"]

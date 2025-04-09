@@ -5,7 +5,14 @@ import { extractionFailures, messagesConsumed } from './metrics';
 import { saveToLanceDB, saveToPostgres } from './persistence';
 
 const kafka = new Kafka({ brokers: config.kafkaBrokers });
-const consumer = kafka.consumer({ groupId: 'entity-extractor-group-1' });
+const consumer = kafka.consumer({ groupId: 'entity-extractor-group-2' });
+
+type ParsedMessage = {
+    type: string;
+    content: string;
+    source: string;
+    author: string;
+};
 
 export async function startConsumer() {
   await consumer.connect();
@@ -23,11 +30,16 @@ export async function startConsumer() {
       messagesConsumed.inc();
 
       try {
-        const parsed = JSON.parse(value);
+
+
+        const parsed: ParsedMessage = JSON.parse(value);
+
         const entities = await extractEntities(parsed.content);
 
-        await saveToPostgres(entities);
+        // Update here 👇
+        await saveToPostgres(entities, parsed.source, parsed.author);
         await saveToLanceDB(entities);
+
 
       } catch (error) {
         console.error('❌ Error processing message:', error);
