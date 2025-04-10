@@ -1,33 +1,50 @@
-import express, { Request, Response } from 'express';
+import express from 'express';
 import client, { Counter } from 'prom-client';
 
-const app = express();
-const register = new client.Registry();
-
-export const messagesConsumed = new client.Counter({
-  name: 'marl0_entity_extractor_messages_total',
-  help: 'Total number of messages consumed',
+// ✅ Define extractionFailures
+export const extractionFailures = new Counter({
+  name: 'entity_extractor_extraction_failures_total',
+  help: 'Number of LLM or JSON parse failures',
 });
 
-export const extractionFailures = new client.Counter({
-  name: 'marl0_entity_extractor_failures_total',
-  help: 'Total number of extraction failures',
-});
-
+// ✅ Define postgresInserts
 export const postgresInserts = new Counter({
   name: 'entity_extractor_postgres_inserts_total',
-  help: 'Total number of Postgres inserts by entity-extractor',
+  help: 'Number of successful entity inserts into Postgres',
 });
 
-register.registerMetric(messagesConsumed);
-register.registerMetric(extractionFailures);
-client.collectDefaultMetrics({ register });
+const app = express();
 
-app.get('/metrics', async (_req: Request, res: Response) => {
-  res.set('Content-Type', register.contentType);
-  res.end(await register.metrics());
+// ✅ Collect default Node.js metrics (event loop, memory, etc.)
+client.collectDefaultMetrics();
+
+// 🧩 Custom metrics
+export const messagesConsumed = new client.Counter({
+  name: 'entity_extractor_messages_consumed_total',
+  help: 'Total number of messages consumed by entity-extractor',
 });
 
-app.listen(3000, () => {
-  console.log('✅ Metrics server running at http://localhost:3000/metrics');
+export const llmRequests = new client.Counter({
+  name: 'entity_extractor_llm_requests_total',
+  help: 'Total LLM requests made',
+});
+
+export const llmFailures = new client.Counter({
+  name: 'entity_extractor_llm_failures_total',
+  help: 'LLM request failures',
+});
+
+export const extractedEntities = new client.Counter({
+  name: 'entity_extractor_entities_extracted_total',
+  help: 'Total number of extracted entities'
+});
+
+// ✅ Serve /metrics endpoint
+app.get('/metrics', async (_req, res) => {
+  res.set('Content-Type', client.register.contentType);
+  res.end(await client.register.metrics());
+});
+
+app.listen(4242, () => {
+  console.log('✅ Metrics server running at http://localhost:4242/metrics');
 });
