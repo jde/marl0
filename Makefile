@@ -56,6 +56,10 @@ rebuild: validate
 	$(DC) build --no-cache
 	$(DC) up -d --force-recreate
 
+rebuild-%:
+	$(DC) build --no-cache $*
+	$(DC) up -d --force-recreate $*
+
 ## Start stack in detached mode
 up: validate
 	$(DC) up -d
@@ -63,6 +67,13 @@ up: validate
 ## Stop running containers
 stop:
 	$(DC) stop
+
+# 🧩 Restart specific service
+restart-%:
+	@echo "🔄 Restarting service: $*"
+	$(DC) stop $*
+	$(DC) up -d $*
+
 
 ## Stop and remove containers, networks, and volumes
 down:
@@ -100,7 +111,7 @@ build-%:
 # 🧩 Local LLM Flow
 # ===============================
 
-MODEL_NAME ?= tinyllama
+LOCAL_LLM_MODEL ?= $(shell grep LOCAL_LLM_MODEL .env.dev | cut -d '=' -f2)
 
 local-llm-up:
 	docker-compose --env-file .env.dev up -d local-llm
@@ -109,7 +120,9 @@ local-llm-down:
 	docker-compose --env-file .env.dev down --remove-orphans --volumes local-llm || true
 
 pull-llm-model:
-	docker-compose --env-file .env.dev exec local-llm ollama pull $(MODEL_NAME)
+	@echo "🔁 Pulling model: $(LOCAL_LLM_MODEL)"
+	docker-compose --env-file .env.dev exec local-llm ollama pull $(LOCAL_LLM_MODEL)
+
 
 list-llm-models:
 	docker-compose --env-file .env.dev exec local-llm ollama list
@@ -126,10 +139,10 @@ wait-for-local-llm:
 
 # 🧩 Init Local LLM Environment
 init-local-llm:
-	@echo "🚀 Initializing local LLM environment with model: $(model)"
+	@echo "🚀 Initializing local LLM environment with model: $(LOCAL_LLM_MODEL)"
 	$(MAKE) local-llm-down
 	$(MAKE) local-llm-up
-	$(MAKE) pull-llm-model MODEL_NAME=$(model)
+	$(MAKE) pull-llm-model
 	$(MAKE) wait-for-local-llm
 	@echo "✅ Local LLM environment is ready!"
 

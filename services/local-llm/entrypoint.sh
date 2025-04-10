@@ -2,7 +2,7 @@
 
 set -e
 
-MODEL_NAME=tinyllama
+MODEL_NAME=tinyllama:latest
 
 # Check if model is already downloaded
 if ! ollama list | grep -q "$MODEL_NAME"; then

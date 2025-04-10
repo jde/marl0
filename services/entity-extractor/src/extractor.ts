@@ -1,6 +1,6 @@
 // import { OpenAI } from 'openai'; // Wire in your preferred provider
 
-import { runLLM } from "./prompter";
+import { runLLM } from "./llm";
 
 // Placeholder extractor function
 export async function extractEntities(text: string): Promise<any[]> {

@@ -45,6 +45,9 @@ services:
         condition: service_healthy
     networks:
       - default
+    environment:
+      - LOCAL_LLM_URL=${LOCAL_LLM_URL}
+      - LOCAL_LLM_MODEL=${LOCAL_LLM_MODEL}
 
   kafka:
     image: bitnami/kafka:latest
@@ -81,7 +84,7 @@ services:
     volumes:
       - ${OLLAMA_DATA_DIR}:/root/.ollama
     environment:
-      - OLLAMA_MODELS=/models
+      - OLLAMA_MODELS=/models   
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "ollama list > /dev/null 2>&1"]

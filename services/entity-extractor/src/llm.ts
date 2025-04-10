@@ -16,9 +16,11 @@ export async function runLocalLLM(prompt: string): Promise<string> {
     throw new Error('LOCAL_LLM_URL environment variable is not set');
   }
 
+  console.log('running local llm', localLlmUrl);
+
   try {
     const response = await axios.post(localLlmUrl, {
-      model: process.env.LOCAL_LLM_MODEL || 'mistral',
+      model: process.env.LOCAL_LLM_MODEL || 'tinyllama:latest',
       prompt,
       stream: false,
     });

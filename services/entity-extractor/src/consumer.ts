@@ -1,18 +1,10 @@
 import { Kafka } from 'kafkajs';
 import { config } from './config';
-import { extractEntities } from './extractor';
+import { runLocalLLM } from './llm'; // ✅ Use local LLM
 import { extractionFailures, messagesConsumed } from './metrics';
-import { saveToLanceDB, saveToPostgres } from './persistence';
 
 const kafka = new Kafka({ brokers: config.kafkaBrokers });
-const consumer = kafka.consumer({ groupId: 'entity-extractor-group-2' });
-
-type ParsedMessage = {
-    type: string;
-    content: string;
-    source: string;
-    author: string;
-};
+const consumer = kafka.consumer({ groupId: 'entity-extractor-group-' + Date.now() });
 
 export async function startConsumer() {
   await consumer.connect();
@@ -26,20 +18,39 @@ export async function startConsumer() {
       if (!value) return;
 
       console.log(`📥 Consumed message: ${value}`);
-
       messagesConsumed.inc();
 
       try {
+        const parsed = JSON.parse(value);
+        const prompt = `
+You are an entity extraction engine. 
 
+Extract all named entities from the following content and return them in clean, minified JSON array format. 
 
-        const parsed: ParsedMessage = JSON.parse(value);
+Respond **only** with the JSON array, with no explanations, no prose. The result should be valid JSON without any additional text or formatting.
 
-        const entities = await extractEntities(parsed.content);
+Example format: [{ name: "entity1", type: "person" }, { name: "entity2", type: "organization" }]
 
-        // Update here 👇
-        await saveToPostgres(entities, parsed.source, parsed.author);
-        await saveToLanceDB(entities);
+Content:
+${parsed.content}
+        `.trim();
 
+        const response = await runLocalLLM(prompt);
+
+        let entities: string[] = [];
+        try {
+          entities = JSON.parse(response);
+        } catch (jsonError) {
+          console.error('❌ Failed to parse LLM response as JSON:', response.slice(0, 100));
+          extractionFailures.inc();
+          return;
+        }
+
+        console.log('🔍 Extracted Entities:', entities);
+
+        entities.forEach(entity => {
+          console.log(`➡️ Entity: ${entity}`);
+        });
 
       } catch (error) {
         console.error('❌ Error processing message:', error);
