@@ -1,5 +1,5 @@
 import express, { Request, Response } from 'express';
-import client from 'prom-client';
+import client, { Counter } from 'prom-client';
 
 const app = express();
 const register = new client.Registry();
@@ -12,6 +12,11 @@ export const messagesConsumed = new client.Counter({
 export const extractionFailures = new client.Counter({
   name: 'marl0_entity_extractor_failures_total',
   help: 'Total number of extraction failures',
+});
+
+export const postgresInserts = new Counter({
+  name: 'entity_extractor_postgres_inserts_total',
+  help: 'Total number of Postgres inserts by entity-extractor',
 });
 
 register.registerMetric(messagesConsumed);
