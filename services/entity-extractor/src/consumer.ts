@@ -1,7 +1,7 @@
 import { Kafka } from 'kafkajs';
 import { config } from './config';
 import { runLocalLLM } from './llm'; // ✅ Use local LLM
-import { extractionFailures, messagesConsumed } from './metrics';
+import { extractionFailures, llmFailures, llmRequests, messageProcessingDuration, messagesConsumed } from './metrics';
 
 const kafka = new Kafka({ brokers: config.kafkaBrokers });
 const consumer = kafka.consumer({ groupId: 'entity-extractor-group-' + Date.now() });
@@ -14,6 +14,9 @@ export async function startConsumer() {
 
   await consumer.run({
     eachMessage: async ({ message }) => {
+
+       const endTimer = messageProcessingDuration.startTimer();
+
       const value = message.value?.toString();
       if (!value) return;
 
@@ -34,7 +37,8 @@ Example format: [{ name: "entity1", type: "person" }, { name: "entity2", type: "
 Content:
 ${parsed.content}
         `.trim();
-
+        
+        llmRequests.inc();
         const response = await runLocalLLM(prompt);
 
         let entities: string[] = [];
@@ -43,6 +47,7 @@ ${parsed.content}
         } catch (jsonError) {
           console.error('❌ Failed to parse LLM response as JSON:', response.slice(0, 100));
           extractionFailures.inc();
+          llmFailures.inc();
           return;
         }
 
@@ -55,6 +60,8 @@ ${parsed.content}
       } catch (error) {
         console.error('❌ Error processing message:', error);
         extractionFailures.inc();
+      } finally {
+        endTimer();
       }
     },
   });

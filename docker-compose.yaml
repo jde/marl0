@@ -35,7 +35,7 @@ services:
       context: ./services/entity-extractor
     container_name: entity-extractor
     ports:
-      - "4243:4242" # Prometheus metrics
+      - "4444:3000" # Prometheus metrics
     depends_on:
       kafka:
         condition: service_healthy
