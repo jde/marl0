@@ -82,7 +82,7 @@ services:
     ports:
       - "11434:11434" # Ollama API default port
     volumes:
-      - ${OLLAMA_DATA_DIR}:/root/.ollama
+      - ./docker_data/ollama:/models
     environment:
       - OLLAMA_MODELS=/models   
     restart: unless-stopped
