@@ -146,6 +146,28 @@ init-local-llm:
 	$(MAKE) wait-for-local-llm
 	@echo "✅ Local LLM environment is ready!"
 
+
+# 🧩 Snapshot all dashboards from Grafana
+GRAFANA_USER ?= admin
+GRAFANA_PASS ?= admin
+GRAFANA_URL ?= http://localhost:4205
+
+snapshot-grafana:
+	@echo "📸 Exporting dashboards from Grafana..."
+	mkdir -p monitoring/grafana/dashboards
+	@curl -s -u $(GRAFANA_USER):$(GRAFANA_PASS) $(GRAFANA_URL)/api/search?query=&type=dash-db \
+		> /tmp/grafana_dash_list.json
+	@jq -c '.[]' /tmp/grafana_dash_list.json | while read -r dashboard; do \
+		uid=$$(echo $$dashboard | jq -r '.uid'); \
+		title=$$(echo $$dashboard | jq -r '.title' | tr ' ' '_' | tr -cd '[:alnum:]_-'); \
+		if [ -n "$$uid" ] && [ -n "$$title" ]; then \
+			echo "💾 Saving dashboard: $$title.json"; \
+			curl -s -u $(GRAFANA_USER):$(GRAFANA_PASS) $(GRAFANA_URL)/api/dashboards/uid/$$uid \
+				| jq '.dashboard' > monitoring/grafana/dashboards/$$title.json; \
+		fi \
+	done
+	@echo "✅ All dashboards saved to monitoring/grafana/dashboards/"
+
 # ===============================
 # 🧩 Help
 # ===============================
