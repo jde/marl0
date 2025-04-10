@@ -56,11 +56,68 @@ Make the `docker-run.sh` script executable:
 chmod +x docker-run.sh
 ```
 
-Then build and start the stack in dev mode:
 
-```bash
-make rebuild
-```
+# 🚀 Local LLM Environment: Quickstart Guide
+
+This guide ensures your local LLM environment (Ollama) is initialized before starting the full stack.
+
+If you're not using a local-llm, you can simply run `make up`
+
+---
+
+## ✅ Quickstart (Recommended)
+
+### One-liner full init:
+make init-local-llm model=tinyllama
+make up
+
+This will:
+- Bring up the LLM container
+- Pull the model (`tinyllama` is fastest for testing)
+- Wait for the healthcheck to pass
+- Start your full stack
+
+ℹ️ Swap `tinyllama` with any Ollama model you prefer.
+
+---
+
+## 🛠️ Optional Manual Steps (Advanced)
+
+### 1. Clean and boot the local LLM container
+make local-llm-down       # optional: ensure clean state
+make local-llm-up         # starts the local LLM container
+
+### 2. Pull the desired LLM model
+make pull-llm-model MODEL_NAME=tinyllama
+
+### 3. Wait for the LLM to pass health checks
+make wait-for-local-llm
+
+### 4. Start the full stack
+make up
+
+---
+
+## 🔍 Verification
+
+- **Verify available models**
+make list-llm-models
+
+- **Check container health**
+docker inspect --format='{{json .State.Health.Status}}' marl0-local-llm-1
+# Expect: "healthy"
+
+---
+
+## 💡 Future Ideas
+
+- Auto-detect model presence and pull if missing.
+- Optimize container healthcheck probes.
+- Automate GPU acceleration.
+- Pre-warm model layers (advanced).
+
+
+
 
 ### Environment Control
 

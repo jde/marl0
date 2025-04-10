@@ -97,6 +97,43 @@ build-%:
 	$(DC) build --no-cache $*
 
 # ===============================
+# 🧩 Local LLM Flow
+# ===============================
+
+MODEL_NAME ?= tinyllama
+
+local-llm-up:
+	docker-compose --env-file .env.dev up -d local-llm
+
+local-llm-down:
+	docker-compose --env-file .env.dev down --remove-orphans --volumes local-llm || true
+
+pull-llm-model:
+	docker-compose --env-file .env.dev exec local-llm ollama pull $(MODEL_NAME)
+
+list-llm-models:
+	docker-compose --env-file .env.dev exec local-llm ollama list
+
+logs-local-llm:
+	ENVIRONMENT=dev ./docker-run.sh logs -f local-llm
+
+wait-for-local-llm:
+	@echo "🕒 Waiting for local-llm healthcheck to pass..."
+	@until docker inspect --format='{{.State.Health.Status}}' marl0-local-llm-1 | grep healthy > /dev/null; do \
+		sleep 2; \
+	done
+	@echo "✅ local-llm is healthy!"
+
+# 🧩 Init Local LLM Environment
+init-local-llm:
+	@echo "🚀 Initializing local LLM environment with model: $(model)"
+	$(MAKE) local-llm-down
+	$(MAKE) local-llm-up
+	$(MAKE) pull-llm-model MODEL_NAME=$(model)
+	$(MAKE) wait-for-local-llm
+	@echo "✅ Local LLM environment is ready!"
+
+# ===============================
 # 🧩 Help
 # ===============================
 

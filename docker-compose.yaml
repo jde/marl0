@@ -41,6 +41,8 @@ services:
         condition: service_healthy
       ingestor:
         condition: service_started
+      local-llm:  
+        condition: service_healthy
     networks:
       - default
 
@@ -71,6 +73,21 @@ services:
       - ALLOW_ANONYMOUS_LOGIN=yes
     ports:
       - "4218:2181"
+
+  local-llm:
+    image: ollama/ollama
+    ports:
+      - "11434:11434" # Ollama API default port
+    volumes:
+      - ${OLLAMA_DATA_DIR}:/root/.ollama
+    environment:
+      - OLLAMA_MODELS=/models
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list > /dev/null 2>&1"]
+      interval: 2s
+      timeout: 5s
+      retries: 300
 
   postgres:
     image: postgres:latest
@@ -137,3 +154,19 @@ services:
       - ${GRAFANA_DATA_DIR}:/var/lib/grafana
     depends_on:
       - prometheus
+
+  curl:
+    image: curlimages/curl:latest
+    entrypoint: ["sleep", "infinity"]
+    networks:
+      - default
+
+  # Pull models at build time
+  # Keep up to date with all models we want to use locally
+  ollama-init:
+    build:
+      context: ./services/ollama-init
+    volumes:
+      - ${OLLAMA_DATA_DIR}:/root/.ollama
+    environment:
+      - OLLAMA_MODELS=/models
