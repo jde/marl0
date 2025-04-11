@@ -124,6 +124,7 @@ model Classification {
   timestamp           DateTime         @default(now())
   deletedAt           DateTime?        @map("deleted_at")
 
+  @@unique([itemId, name])
   @@index([itemId])
   @@index([actorId])
   @@index([name])
