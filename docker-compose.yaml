@@ -18,6 +18,37 @@ services:
       - NODE_ENV=development
     command: ["npm", "run", "dev"]
 
+  ingestor:
+    build:
+      context: ./services/ingestor
+    container_name: ingestor
+    ports:
+      - "3000:3000" # Prometheus metrics
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks:
+      - default
+
+  entity-extractor:
+    build:
+      context: ./services/entity-extractor
+    container_name: entity-extractor
+    ports:
+      - "4444:3000" # Prometheus metrics
+    depends_on:
+      kafka:
+        condition: service_healthy
+      ingestor:
+        condition: service_started
+      local-llm:  
+        condition: service_healthy
+    networks:
+      - default
+    environment:
+      - LOCAL_LLM_URL=${LOCAL_LLM_URL}
+      - LOCAL_LLM_MODEL=${LOCAL_LLM_MODEL}
+
   kafka:
     image: bitnami/kafka:latest
     ports:
@@ -33,13 +64,33 @@ services:
       - ALLOW_PLAINTEXT_LISTENER=yes
     depends_on:
       - zookeeper
-
+    healthcheck:
+      test: ["CMD", "bash", "-c", "echo > /dev/tcp/localhost/9092"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      
   zookeeper:
     image: bitnami/zookeeper:latest
     environment:
       - ALLOW_ANONYMOUS_LOGIN=yes
     ports:
       - "4218:2181"
+
+  local-llm:
+    image: ollama/ollama
+    ports:
+      - "11434:11434" # Ollama API default port
+    volumes:
+      - ./docker_data/ollama:/models
+    environment:
+      - OLLAMA_MODELS=/models   
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list > /dev/null 2>&1"]
+      interval: 2s
+      timeout: 5s
+      retries: 300
 
   postgres:
     image: postgres:latest
@@ -104,5 +155,24 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=admin
     volumes:
       - ${GRAFANA_DATA_DIR}:/var/lib/grafana
+      - ./monitoring/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+      - ./monitoring/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
     depends_on:
       - prometheus
+
+  curl:
+    image: curlimages/curl:latest
+    entrypoint: ["sleep", "infinity"]
+    networks:
+      - default
+
+  # Pull models at build time
+  # Keep up to date with all models we want to use locally
+  ollama-init:
+    build:
+      context: ./services/ollama-init
+    volumes:
+      - ${OLLAMA_DATA_DIR}:/root/.ollama
+    environment:
+      - OLLAMA_MODELS=/models

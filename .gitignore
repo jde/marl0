@@ -1,3 +1,6 @@
 # Ignore all contents of docker_data but keep directories
 docker_data/*/*
 !docker_data/**/.gitkeep
+
+**/node_modules/
+**/dist/
