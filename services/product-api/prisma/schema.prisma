@@ -1,0 +1,134 @@
+/// Marl0 Product Layer Schema v0.1
+/// Primary data model: Item, Classification, ProvenanceEdge, Actor
+/// Relationships: All causal and classification relationships explicitly modeled
+
+/// Table namespace: product_
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Item {
+  id              String              @id @default(cuid())
+  createdById     String              @map("created_by_id")
+  createdBy       Actor               @relation("item_created_by", fields: [createdById], references: [id])
+
+  payload         Json
+
+  outputFrom      ProvenanceOutput[] @relation("item_outputs")
+  inputTo         ProvenanceInput[]  @relation("item_inputs")
+
+  classifications Classification[]   @relation("item_classifications")
+
+  createdAt       DateTime            @default(now()) @map("created_at")
+  deletedAt       DateTime?           @map("deleted_at")
+
+  @@index([createdById])
+  @@index([deletedAt])
+  @@map("product_item")
+}
+
+model ProvenanceEdge {
+  id           String               @id @default(cuid())
+  actorId      String               @map("actor_id")
+  actor        Actor                @relation("provenance_edge_actor", fields: [actorId], references: [id])
+
+  timestamp    DateTime
+  action       String
+  parameters   Json?
+  notes        String?
+
+  inputs       ProvenanceInput[]    @relation("provenance_inputs")
+  outputs      ProvenanceOutput[]   @relation("provenance_outputs")
+
+  deletedAt    DateTime?            @map("deleted_at")
+
+  @@index([actorId])
+  @@index([timestamp])
+  @@index([deletedAt])
+  @@map("product_provenance_edge")
+}
+
+model ProvenanceInput {
+  id                 String           @id @default(cuid())
+  provenanceEdgeId   String           @map("provenance_edge_id")
+  provenanceEdge     ProvenanceEdge  @relation("provenance_inputs", fields: [provenanceEdgeId], references: [id])
+
+  itemId             String           @map("item_id")
+  item               Item             @relation("item_inputs", fields: [itemId], references: [id])
+
+  @@index([provenanceEdgeId])
+  @@index([itemId])
+  @@index([provenanceEdgeId, itemId])
+  @@map("product_provenance_input")
+}
+
+model ProvenanceOutput {
+  id                 String           @id @default(cuid())
+  provenanceEdgeId   String           @map("provenance_edge_id")
+  provenanceEdge     ProvenanceEdge  @relation("provenance_outputs", fields: [provenanceEdgeId], references: [id])
+
+  itemId             String           @map("item_id")
+  item               Item             @relation("item_outputs", fields: [itemId], references: [id])
+
+  @@index([provenanceEdgeId])
+  @@index([itemId])
+  @@index([provenanceEdgeId, itemId])
+  @@map("product_provenance_output")
+}
+
+model Actor {
+  id               String               @id
+  name             String
+  version          String
+  actorKind        String               @map("actor_kind")
+  actorMethod      String?              @map("actor_method")
+
+  createdItems     Item[]               @relation("item_created_by")
+  provenanceEdges  ProvenanceEdge[]     @relation("provenance_edge_actor")
+  classifications  Classification[]     @relation("classification_actor")
+
+  createdAt        DateTime             @default(now()) @map("created_at")
+  deletedAt        DateTime?            @map("deleted_at")
+
+  @@index([name])
+  @@index([actorKind])
+  @@index([deletedAt])
+  @@map("product_actor")
+}
+
+model Classification {
+  id                  String           @id @default(cuid())
+  itemId              String           @map("item_id")
+  item                Item             @relation("item_classifications", fields: [itemId], references: [id])
+
+  actorId             String           @map("actor_id")
+  actor               Actor            @relation("classification_actor", fields: [actorId], references: [id])
+
+  name                String
+  value               String
+
+  confidence          Float?
+  namespace           String?
+  taxonomyVersionId   String?          @map("taxonomy_version_id")
+  
+  supersedesId        String?          @map("supersedes_id")
+  supersedes          Classification?  @relation("classification_supersedes", fields: [supersedesId], references: [id])
+  supersededBy        Classification[] @relation("classification_supersedes")
+  
+  timestamp           DateTime         @default(now())
+  deletedAt           DateTime?        @map("deleted_at")
+
+  @@index([itemId])
+  @@index([actorId])
+  @@index([name])
+  @@index([namespace])
+  @@index([deletedAt])
+  @@index([itemId, name])
+  @@map("product_classification")
+}

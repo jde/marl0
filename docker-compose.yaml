@@ -18,6 +18,26 @@ services:
       - NODE_ENV=development
     command: ["npm", "run", "dev"]
 
+  product-api:
+    build: ./services/product-api
+    ports:
+      - "42420:3000"
+    environment:
+      DATABASE_URL: postgres://marl0:marl0@postgres:5432/marl0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      bootstrap:
+        condition: service_completed_successfully
+    volumes:
+      - ./services/product-api:/app
+    command: npm run dev
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"]
+      interval: 1s                
+      timeout: 3s
+      retries: 15
+
   ingestor:
     build:
       context: ./services/ingestor
@@ -102,7 +122,13 @@ services:
       - "4242:5432"
     volumes:
       - ${POSTGRES_DATA_DIR}:/var/lib/postgresql/data
-
+      - ./services/postgres/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 1s
+      timeout: 5s
+      retries: 30
+      
   lancedb:
     build:
       context: ./services/lancedb
@@ -176,3 +202,18 @@ services:
       - ${OLLAMA_DATA_DIR}:/root/.ollama
     environment:
       - OLLAMA_MODELS=/models
+
+  bootstrap:
+    build:
+      context: ./services/bootstrap
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      POSTGRES_USER: youruser
+      POSTGRES_PASSWORD: yourpass
+      POSTGRES_DB: yourdb
+      MARL0_POSTGRES_USER: marl0
+      MARL0_POSTGRES_PASSWORD: marl0
+      MARL0_POSTGRES_DB: marl0
+    restart: "no"
