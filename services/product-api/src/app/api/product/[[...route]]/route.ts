@@ -1,8 +1,9 @@
+// src/app/api/product/[[...route]]/route.ts
+
 import * as Read from '@/services/read'
 import * as Utils from '@/services/utils'
-import { ensureAgent, performActivity } from '@/services/write'
+import * as Write from '@/services/write'
 import { NextRequest, NextResponse } from 'next/server'
-import { z } from 'zod'
 
 export const dynamic = 'force-dynamic'
 
@@ -18,37 +19,11 @@ type RouteDefinition = {
 
 const routes: RouteDefinition[] = [
   {
-  method: 'POST',
-  routeParams: ['perform', 'activity'],
-  routeHandler: async ({ body }) => {
-    const parsed = z.object({
-      agent: z.object({
-        id: z.string(),
-        name: z.string(),
-        version: z.string(),
-        agentKind: z.enum(['human', 'automated', 'hybrid']),
-        agentMethod: z.string().optional(),
-      }),
-      activity: z.object({
-        action: z.string(),
-        timestamp: z.string(),
-      }),
-      usedEntityIds: z.array(z.string()),
-      generatedEntities: z.array(z.object({
-        payload: z.any(),
-        classifications: z.array(z.object({
-          name: z.string(),
-          value: z.string(),
-          confidence: z.number().optional(),
-          namespace: z.string().optional(),
-          taxonomyVersionId: z.string().optional(),
-          overrideId: z.string().optional(),
-        })).optional()
-      })),
-    }).parse(body)
-
-    await ensureAgent(parsed.agent)
-    return performActivity(parsed)
+    method: 'POST',
+    routeParams: ['perform', 'activity'],
+    routeHandler: async ({ body }) => {
+      await Write.ensureAgent(body.agent)
+      return Write.performActivity(body)
     },
   },
   {
@@ -169,7 +144,6 @@ export async function POST(req: NextRequest) {
     const result = await matched.routeHandler({ route, query: url.searchParams, body })
     return NextResponse.json(result, { status: 201 })
   } catch (err: any) {
-    console.error(err)
     return NextResponse.json({ error: err.message }, { status: 400 })
   }
 }
