@@ -38,6 +38,7 @@ model Activity {
   agent       Agent            @relation("activity_agent", fields: [agentId], references: [id])
   used        ProvenanceInput[] @relation("activity_used")
   generated   ProvenanceOutput[] @relation("activity_generated")
+  generatedClassifications Classification[] @relation("activity_generated_classifications")
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
   deletedAt   DateTime?
@@ -101,6 +102,8 @@ model Classification {
   entity          Entity   @relation("entity_classifications", fields: [entityId], references: [id])
   agentId         String   @map("agent_id")
   agent           Agent    @relation("classification_agent", fields: [agentId], references: [id])
+  activityId      String?
+  activity        Activity? @relation("activity_generated_classifications", fields: [activityId], references: [id])
   name            String
   value           String
   confidence      Float?
