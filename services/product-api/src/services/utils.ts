@@ -2,7 +2,7 @@
 
 import { db } from '@/lib/prisma'
 
-export async function getAncestry(itemId: string, depth: number = 3): Promise<string[]> {
+export async function getAncestry(entityId: string, depth: number = 3): Promise<string[]> {
   const seen = new Set<string>()
   const result: string[] = []
 
@@ -13,7 +13,7 @@ export async function getAncestry(itemId: string, depth: number = 3): Promise<st
 
     const edge = await db.provenanceEdge.findFirst({
       where: {
-        outputs: { some: { itemId: id } },
+        outputs: { some: { entityId: id } },
       },
       include: {
         inputs: true,
@@ -23,17 +23,17 @@ export async function getAncestry(itemId: string, depth: number = 3): Promise<st
     if (!edge) return
 
     for (const input of edge.inputs) {
-      await walk(input.itemId, d + 1)
+      await walk(input.entityId, d + 1)
     }
   }
 
-  await walk(itemId, 0)
+  await walk(entityId, 0)
   return result
 }
 
-export async function getConsensusLabels(itemId: string): Promise<Record<string, string>> {
+export async function getConsensusLabels(entityId: string): Promise<Record<string, string>> {
   const classifications = await db.classification.findMany({
-    where: { itemId },
+    where: { entityId },
   })
 
   const map: Record<string, Record<string, number>> = {}
@@ -53,10 +53,10 @@ export async function getConsensusLabels(itemId: string): Promise<Record<string,
   return consensus
 }
 
-export async function getClassificationDiffs(itemA: string, itemB: string) {
+export async function getClassificationDiffs(entityA: string, entityB: string) {
   const [a, b] = await Promise.all([
-    db.classification.findMany({ where: { itemId: itemA } }),
-    db.classification.findMany({ where: { itemId: itemB } }),
+    db.classification.findMany({ where: { entityId: entityA } }),
+    db.classification.findMany({ where: { entityId: entityB } }),
   ])
 
   const result = []
@@ -76,17 +76,17 @@ export async function getClassificationDiffs(itemA: string, itemB: string) {
   return result
 }
 
-export async function getForksFrom(itemId: string) {
+export async function getForksFrom(entityId: string) {
   const edge = await db.provenanceEdge.findFirst({
     where: {
       inputs: {
-        some: { itemId },
+        some: { entityId },
       },
     },
     include: {
       outputs: {
         include: {
-          item: true,
+          entity: true,
         },
       },
     },
@@ -94,10 +94,10 @@ export async function getForksFrom(itemId: string) {
 
   if (!edge) return []
 
-  return edge.outputs.map((o) => o.item)
+  return edge.outputs.map((o) => o.entity)
 }
 
-export async function getLatestVersionsOf(itemId: string): Promise<string[]> {
+export async function getLatestVersionsOf(entityId: string): Promise<string[]> {
   const seen = new Set<string>()
   const children: string[] = []
 
@@ -107,7 +107,7 @@ export async function getLatestVersionsOf(itemId: string): Promise<string[]> {
 
     const edge = await db.provenanceEdge.findFirst({
       where: {
-        inputs: { some: { itemId: id } },
+        inputs: { some: { entityId: id } },
       },
       include: {
         outputs: true,
@@ -120,10 +120,10 @@ export async function getLatestVersionsOf(itemId: string): Promise<string[]> {
     }
 
     for (const out of edge.outputs) {
-      await walk(out.itemId)
+      await walk(out.entityId)
     }
   }
 
-  await walk(itemId)
+  await walk(entityId)
   return children
 }

@@ -1,5 +1,5 @@
 /// Marl0 Product Layer Schema v0.1
-/// Primary data model: Item, Classification, ProvenanceEdge, Actor
+/// Primary data model: Entity, Classification, ProvenanceEdge, Actor
 /// Relationships: All causal and classification relationships explicitly modeled
 
 /// Table namespace: product_
@@ -13,24 +13,24 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Item {
+model Entity {
   id              String              @id @default(cuid())
   createdById     String              @map("created_by_id")
-  createdBy       Actor               @relation("item_created_by", fields: [createdById], references: [id])
+  createdBy       Actor               @relation("entity_created_by", fields: [createdById], references: [id])
 
   payload         Json
 
-  outputFrom      ProvenanceOutput[] @relation("item_outputs")
-  inputTo         ProvenanceInput[]  @relation("item_inputs")
+  outputFrom      ProvenanceOutput[] @relation("entity_outputs")
+  inputTo         ProvenanceInput[]  @relation("entity_inputs")
 
-  classifications Classification[]   @relation("item_classifications")
+  classifications Classification[]   @relation("entity_classifications")
 
   createdAt       DateTime            @default(now()) @map("created_at")
   deletedAt       DateTime?           @map("deleted_at")
 
   @@index([createdById])
   @@index([deletedAt])
-  @@map("product_item")
+  @@map("product_entity")
 }
 
 model ProvenanceEdge {
@@ -59,12 +59,12 @@ model ProvenanceInput {
   provenanceEdgeId   String           @map("provenance_edge_id")
   provenanceEdge     ProvenanceEdge  @relation("provenance_inputs", fields: [provenanceEdgeId], references: [id])
 
-  itemId             String           @map("item_id")
-  item               Item             @relation("item_inputs", fields: [itemId], references: [id])
+  entityId           String           @map("entity_id")
+  entity             Entity           @relation("entity_inputs", fields: [entityId], references: [id])
 
   @@index([provenanceEdgeId])
-  @@index([itemId])
-  @@index([provenanceEdgeId, itemId])
+  @@index([entityId])
+  @@index([provenanceEdgeId, entityId])
   @@map("product_provenance_input")
 }
 
@@ -73,12 +73,12 @@ model ProvenanceOutput {
   provenanceEdgeId   String           @map("provenance_edge_id")
   provenanceEdge     ProvenanceEdge  @relation("provenance_outputs", fields: [provenanceEdgeId], references: [id])
 
-  itemId             String           @map("item_id")
-  item               Item             @relation("item_outputs", fields: [itemId], references: [id])
+  entityId           String           @map("entity_id")
+  entity             Entity           @relation("entity_outputs", fields: [entityId], references: [id])
 
   @@index([provenanceEdgeId])
-  @@index([itemId])
-  @@index([provenanceEdgeId, itemId])
+  @@index([entityId])
+  @@index([provenanceEdgeId, entityId])
   @@map("product_provenance_output")
 }
 
@@ -89,7 +89,7 @@ model Actor {
   actorKind        String               @map("actor_kind")
   actorMethod      String?              @map("actor_method")
 
-  createdItems     Item[]               @relation("item_created_by")
+  createdEntities  Entity[]             @relation("entity_created_by")
   provenanceEdges  ProvenanceEdge[]     @relation("provenance_edge_actor")
   classifications  Classification[]     @relation("classification_actor")
 
@@ -104,8 +104,8 @@ model Actor {
 
 model Classification {
   id                  String           @id @default(cuid())
-  itemId              String           @map("item_id")
-  item                Item             @relation("item_classifications", fields: [itemId], references: [id])
+  entityId            String           @map("entity_id")
+  entity              Entity           @relation("entity_classifications", fields: [entityId], references: [id])
 
   actorId             String           @map("actor_id")
   actor               Actor            @relation("classification_actor", fields: [actorId], references: [id])
@@ -124,12 +124,12 @@ model Classification {
   timestamp           DateTime         @default(now())
   deletedAt           DateTime?        @map("deleted_at")
 
-  @@unique([itemId, name])
-  @@index([itemId])
+  @@unique([entityId, name])
+  @@index([entityId])
   @@index([actorId])
   @@index([name])
   @@index([namespace])
   @@index([deletedAt])
-  @@index([itemId, name])
+  @@index([entityId, name])
   @@map("product_classification")
 }

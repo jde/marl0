@@ -1,8 +1,8 @@
 // services/product/write.ts
 
 import { db } from '@/lib/prisma'
-import { ActorContext, CreateItemsArgs, CreateItemsResult, UpsertClassificationArgs } from '@/services/types'
-
+import { ActorContext, CreateEntitiesArgs, CreateEntitiesResult, UpsertClassificationArgs } from '@/services/types'
+import { Prisma } from '@prisma/client'
 // Ensure the actor exists in the database or create it if missing
 export async function ensureActor(actor: ActorContext) {
   return db.actor.upsert({
@@ -18,67 +18,72 @@ export async function ensureActor(actor: ActorContext) {
   })
 }
 
-// Create items, their provenance, and any classifications (atomically)
-export async function createItems(
+// Create entities, their provenance, and any classifications (atomically)
+export async function createEntities(
   actor: ActorContext,
-  itemsData: CreateItemsArgs['items']
-): Promise<CreateItemsResult> {
+  entitiesData: CreateEntitiesArgs['entities']
+): Promise<CreateEntitiesResult> {
   return db.$transaction(async (tx) => {
-    const itemRecords = []
+    const entityRecords = []
     const edgeRecords = []
 
-    for (const item of itemsData) {
-      const newItem = await tx.item.create({
+    for (const entity of entitiesData) {
+      const newEntity = await tx.entity.create({
         data: {
-          payload: item.payload,
+          payload: entity.payload,
           createdById: actor.id,
         },
       })
-      itemRecords.push(newItem)
+      entityRecords.push(newEntity)
 
-      if (item.provenance) {
+      if (entity.provenance) {
         const edge = await tx.provenanceEdge.create({
           data: {
             actorId: actor.id,
-            timestamp: item.provenance.timestamp,
-            action: item.provenance.action,
-            parameters: item.provenance.parameters,
+            timestamp: entity.provenance.timestamp,
+            action: entity.provenance.action,
+            parameters: entity.provenance.parameters,
             inputs: {
-              create: item.provenance.inputItemIds.map((itemId) => ({ itemId })),
+              create: entity.provenance.inputEntityIds.map((entityId) => ({ entityId })),
             },
             outputs: {
-              create: [{ itemId: newItem.id }],
+              create: [{ entityId: newEntity.id }],
             },
           },
         })
         edgeRecords.push(edge)
       }
 
-      if (item.classifications?.length) {
-        for (const classification of item.classifications) {
-          await upsertClassification({
-            actor,
-            itemId: newItem.id,
-            name: classification.name,
-            value: classification.value,
-            confidence: classification.confidence,
-            namespace: classification.namespace,
-            taxonomyVersionId: classification.taxonomyVersionId,
-            overrideId: classification.overrideId,
-          })
+      if (entity.classifications?.length) {
+        for (const classification of entity.classifications) {
+          await upsertClassification(tx, {
+          actor,
+          entityId: newEntity.id,
+          name: classification.name,
+          value: classification.value,
+          confidence: classification.confidence,
+          namespace: classification.namespace,
+          taxonomyVersionId: classification.taxonomyVersionId,
+          overrideId: classification.overrideId,
+        })
+
         }
       }
     }
 
-    return { items: itemRecords, provenanceEdges: edgeRecords }
+    return { entities: entityRecords, provenanceEdges: edgeRecords }
   })
 }
 
-// Insert or update a classification for a given item
-export async function upsertClassification(args: UpsertClassificationArgs) {
+// Insert or update a classification for a given entity
+
+export async function upsertClassification(
+  tx: Prisma.TransactionClient,
+  args: UpsertClassificationArgs
+) {
   const {
     actor,
-    itemId,
+    entityId,
     name,
     value,
     confidence,
@@ -87,10 +92,10 @@ export async function upsertClassification(args: UpsertClassificationArgs) {
     overrideId,
   } = args
 
-  return db.classification.upsert({
+  return tx.classification.upsert({
     where: {
-      itemId_name: {
-        itemId,
+      entityId_name: {
+        entityId,
         name,
       },
     },
@@ -103,7 +108,7 @@ export async function upsertClassification(args: UpsertClassificationArgs) {
       actorId: actor.id,
     },
     create: {
-      itemId,
+      entityId,
       name,
       value,
       confidence,

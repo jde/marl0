@@ -3,8 +3,8 @@
 import { db } from '@/lib/prisma'
 import type { ProvenanceEdge } from '@prisma/client'
 
-export async function getItemById(id: string) {
-  return db.item.findUnique({
+export async function getEntityById(id: string) {
+  return db.entity.findUnique({
     where: { id },
     include: {
       classifications: true,
@@ -14,8 +14,8 @@ export async function getItemById(id: string) {
   })
 }
 
-export async function getItemsByLabel(name: string, value: string) {
-  return db.item.findMany({
+export async function getEntitiesByLabel(name: string, value: string) {
+  return db.entity.findMany({
     where: {
       classifications: {
         some: {
@@ -27,28 +27,28 @@ export async function getItemsByLabel(name: string, value: string) {
   })
 }
 
-export async function getClassifications(itemId: string) {
+export async function getClassifications(entityId: string) {
   return db.classification.findMany({
-    where: { itemId },
+    where: { entityId },
   })
 }
 
-export async function getClassificationHistory(itemId: string, name?: string) {
+export async function getClassificationHistory(entityId: string, name?: string) {
   return db.classification.findMany({
     where: {
-      itemId,
+      entityId,
       ...(name && { name }),
     },
     orderBy: { timestamp: 'desc' },
   })
 }
 
-export async function getProvenance(itemId: string, depth: number = 1): Promise<ProvenanceEdge[]> {
+export async function getProvenance(entityId: string, depth: number = 1): Promise<ProvenanceEdge[]> {
   const provenanceEdges = await db.provenanceEdge.findMany({
     where: {
       outputs: {
         some: {
-          itemId,
+          entityId,
         },
       },
     },
@@ -62,14 +62,14 @@ export async function getProvenance(itemId: string, depth: number = 1): Promise<
 
   const parentEdges: ProvenanceEdge[][] = await Promise.all(
     provenanceEdges.flatMap((edge) =>
-      edge.inputs.map((input) => getProvenance(input.itemId, depth - 1))
+      edge.inputs.map((input) => getProvenance(input.entityId, depth - 1))
     )
   )
 
   return [...provenanceEdges, ...parentEdges.flat()]
 }
 
-export async function getProvenanceTimeline(itemId: string, depth: number = 1) {
+export async function getProvenanceTimeline(entityId: string, depth: number = 1) {
   const seen = new Set<string>()
   const result: any[] = []
 
@@ -77,13 +77,13 @@ export async function getProvenanceTimeline(itemId: string, depth: number = 1) {
     if (seen.has(id) || d > depth) return
     seen.add(id)
 
-    const item = await db.item.findUnique({ where: { id } })
-    if (item) result.push(item)
+    const entity = await db.entity.findUnique({ where: { id } })
+    if (entity) result.push(entity)
 
     const edge = await db.provenanceEdge.findFirst({
       where: {
         outputs: {
-          some: { itemId: id },
+          some: { entityId: id },
         },
       },
       include: { inputs: true },
@@ -92,25 +92,25 @@ export async function getProvenanceTimeline(itemId: string, depth: number = 1) {
     if (!edge) return
 
     for (const input of edge.inputs) {
-      await walk(input.itemId, d + 1)
+      await walk(input.entityId, d + 1)
     }
   }
 
-  await walk(itemId, 0)
+  await walk(entityId, 0)
   return result
 }
 
-export async function getSiblings(itemId: string) {
+export async function getSiblings(entityId: string) {
   const edge = await db.provenanceEdge.findFirst({
     where: {
       outputs: {
-        some: { itemId },
+        some: { entityId },
       },
     },
     include: {
       outputs: {
         include: {
-          item: true,
+          entity: true,
         },
       },
     },
@@ -118,7 +118,7 @@ export async function getSiblings(itemId: string) {
 
   if (!edge) return []
 
-  return edge.outputs.map((o) => o.item).filter((item) => item.id !== itemId)
+  return edge.outputs.map((o) => o.entity).filter((entity) => entity.id !== entityId)
 }
 
 export async function getActorById(actorId: string) {

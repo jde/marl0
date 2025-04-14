@@ -17,34 +17,34 @@ export type ClassificationInput = {
   overrideId?: string
 }
 
-export type CreateItemsArgs = {
+export type CreateEntitiesArgs = {
   actor: ActorContext
-  items: {
+  entities: {
     payload: any
     provenance?: {
       action: string
       timestamp: string
       parameters?: any
-      inputItemIds: string[]
+      inputEntityIds: string[]
     }
     classifications?: ClassificationInput[]
   }[]
 }
 
-export type CreateItemsResult = {
-  items: any[] // Will be typed as Prisma.Item[] if imported
+export type CreateEntitiesResult = {
+  entities: any[] // Will be typed as Prisma.Entity[] if imported
   provenanceEdges: any[] // Will be typed as Prisma.ProvenanceEdge[] if imported
 }
 
-export type ClassifyItemArgs = {
+export type ClassifyEntityArgs = {
   actor: ActorContext
-  itemId: string
+  entityId: string
   classification: ClassificationInput
 }
 
 export type UpsertClassificationArgs = {
   actor: ActorContext
-  itemId: string
+  entityId: string
   name: string
   value: string
   confidence?: number

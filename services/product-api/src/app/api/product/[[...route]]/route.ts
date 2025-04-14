@@ -1,7 +1,5 @@
-// src/app/api/product/[[...route]]/route.ts
-
 import * as Read from '@/services/read'
-import { CreateItemsArgs } from '@/services/types'
+import { CreateEntitiesArgs } from '@/services/types'
 import * as Utils from '@/services/utils'
 import * as Write from '@/services/write'
 import { NextRequest, NextResponse } from 'next/server'
@@ -22,7 +20,7 @@ type RouteDefinition = {
 const routes: RouteDefinition[] = [
   {
     method: 'POST',
-    routeParams: ['create', 'items'],
+    routeParams: ['create', 'entities'],
     routeHandler: async ({ body }) => {
       const parsed = z.object({
         actor: z.object({
@@ -32,17 +30,17 @@ const routes: RouteDefinition[] = [
           actorKind: z.enum(['human', 'automated', 'hybrid']),
           actorMethod: z.string().optional(),
         }),
-        items: z.array(z.any()),
-      }).parse(body) satisfies CreateItemsArgs
+        entities: z.array(z.any()),
+      }).parse(body) satisfies CreateEntitiesArgs
 
       await Write.ensureActor(parsed.actor)
-      return Write.createItems(parsed.actor, parsed.items)
+      return Write.createEntities(parsed.actor, parsed.entities)
     },
   },
   {
     method: 'GET',
-    routeParams: ['item'],
-    routeHandler: async ({ query }) => Read.getItemById(query.get('id') || ''),
+    routeParams: ['entity'],
+    routeHandler: async ({ query }) => Read.getEntityById(query.get('id') || ''),
   },
   {
     method: 'GET',
@@ -52,63 +50,63 @@ const routes: RouteDefinition[] = [
   {
     method: 'GET',
     routeParams: ['classifications'],
-    routeHandler: async ({ query }) => Read.getClassifications(query.get('itemId') || ''),
+    routeHandler: async ({ query }) => Read.getClassifications(query.get('entityId') || ''),
   },
   {
     method: 'GET',
     routeParams: ['classification', 'history'],
     routeHandler: async ({ query }) =>
-      Read.getClassificationHistory(query.get('itemId') || '', query.get('name') || undefined),
+      Read.getClassificationHistory(query.get('entityId') || '', query.get('name') || undefined),
   },
   {
     method: 'GET',
-    routeParams: ['items', 'by-label'],
+    routeParams: ['entities', 'by-label'],
     routeHandler: async ({ query }) =>
-      Read.getItemsByLabel(query.get('name') || '', query.get('value') || ''),
+      Read.getEntitiesByLabel(query.get('name') || '', query.get('value') || ''),
   },
   {
     method: 'GET',
     routeParams: ['provenance'],
     routeHandler: async ({ query }) =>
-      Read.getProvenance(query.get('itemId') || '', parseInt(query.get('depth') || '1')),
+      Read.getProvenance(query.get('entityId') || '', parseInt(query.get('depth') || '1')),
   },
   {
     method: 'GET',
     routeParams: ['provenance', 'timeline'],
     routeHandler: async ({ query }) =>
-      Read.getProvenanceTimeline(query.get('itemId') || '', parseInt(query.get('depth') || '1')),
+      Read.getProvenanceTimeline(query.get('entityId') || '', parseInt(query.get('depth') || '1')),
   },
   {
     method: 'GET',
     routeParams: ['siblings'],
-    routeHandler: async ({ query }) => Read.getSiblings(query.get('itemId') || ''),
+    routeHandler: async ({ query }) => Read.getSiblings(query.get('entityId') || ''),
   },
   {
     method: 'GET',
     routeParams: ['ancestry'],
     routeHandler: async ({ query }) =>
-      Utils.getAncestry(query.get('itemId') || '', parseInt(query.get('depth') || '3')),
+      Utils.getAncestry(query.get('entityId') || '', parseInt(query.get('depth') || '3')),
   },
   {
     method: 'GET',
     routeParams: ['consensus', 'labels'],
-    routeHandler: async ({ query }) => Utils.getConsensusLabels(query.get('itemId') || ''),
+    routeHandler: async ({ query }) => Utils.getConsensusLabels(query.get('entityId') || ''),
   },
   {
     method: 'GET',
     routeParams: ['classification', 'diffs'],
     routeHandler: async ({ query }) =>
-      Utils.getClassificationDiffs(query.get('itemA') || '', query.get('itemB') || ''),
+      Utils.getClassificationDiffs(query.get('entityA') || '', query.get('entityB') || ''),
   },
   {
     method: 'GET',
     routeParams: ['forks', 'from'],
-    routeHandler: async ({ query }) => Utils.getForksFrom(query.get('itemId') || ''),
+    routeHandler: async ({ query }) => Utils.getForksFrom(query.get('entityId') || ''),
   },
   {
     method: 'GET',
     routeParams: ['latest', 'versions'],
-    routeHandler: async ({ query }) => Utils.getLatestVersionsOf(query.get('itemId') || ''),
+    routeHandler: async ({ query }) => Utils.getLatestVersionsOf(query.get('entityId') || ''),
   },
 ]
 
@@ -157,6 +155,7 @@ export async function POST(req: NextRequest) {
     const result = await matched.routeHandler({ route, query: url.searchParams, body })
     return NextResponse.json(result, { status: 201 })
   } catch (err: any) {
+    console.error(err)
     return NextResponse.json({ error: err.message }, { status: 400 })
   }
 }
