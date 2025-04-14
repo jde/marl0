@@ -1,15 +1,23 @@
 // services/product/read.ts
 
 import { db } from '@/lib/prisma'
-import type { ProvenanceEdge } from '@prisma/client'
+import type { Activity, Entity, ProvenanceInput, ProvenanceOutput } from '@prisma/client'
 
-export async function getEntityById(id: string) {
+type ActivityWithRelations = Activity & {
+  used: ProvenanceInput[]
+  generated: ProvenanceOutput[]
+  agent: {
+    id: string
+    name: string
+  }
+}
+
+export async function getEntityById(entityId: string) {
   return db.entity.findUnique({
-    where: { id },
+    where: { id: entityId },
     include: {
       classifications: true,
-      inputTo: true,
-      outputFrom: true,
+      createdBy: true,
     },
   })
 }
@@ -39,39 +47,39 @@ export async function getClassificationHistory(entityId: string, name?: string) 
       entityId,
       ...(name && { name }),
     },
-    orderBy: { timestamp: 'desc' },
+    orderBy: { createdAt: 'desc' },
   })
 }
 
-export async function getProvenance(entityId: string, depth: number = 1): Promise<ProvenanceEdge[]> {
-  const provenanceEdges = await db.provenanceEdge.findMany({
+export async function getProvenance(entityId: string, depth: number = 1): Promise<ActivityWithRelations[]> {
+  const activities = await db.activity.findMany({
     where: {
-      outputs: {
-        some: {
-          entityId,
-        },
-      },
+      OR: [
+        { generated: { some: { entityId } } },
+        { used: { some: { entityId } } },
+      ],
     },
     include: {
-      inputs: true,
-      outputs: true,
+      used: true,
+      generated: true,
+      agent: true,
     },
-  })
+  }) as ActivityWithRelations[]
 
-  if (depth <= 1) return provenanceEdges
+  if (depth <= 1) return activities
 
-  const parentEdges: ProvenanceEdge[][] = await Promise.all(
-    provenanceEdges.flatMap((edge) =>
-      edge.inputs.map((input) => getProvenance(input.entityId, depth - 1))
+  const parentActivities: ActivityWithRelations[][] = await Promise.all(
+    activities.flatMap((activity) =>
+      activity.used.map((input) => getProvenance(input.entityId, depth - 1))
     )
   )
 
-  return [...provenanceEdges, ...parentEdges.flat()]
+  return [...activities, ...parentActivities.flat()]
 }
 
 export async function getProvenanceTimeline(entityId: string, depth: number = 1) {
   const seen = new Set<string>()
-  const result: any[] = []
+  const result: Entity[] = []
 
   async function walk(id: string, d: number) {
     if (seen.has(id) || d > depth) return
@@ -80,18 +88,18 @@ export async function getProvenanceTimeline(entityId: string, depth: number = 1)
     const entity = await db.entity.findUnique({ where: { id } })
     if (entity) result.push(entity)
 
-    const edge = await db.provenanceEdge.findFirst({
+    const activity = await db.activity.findFirst({
       where: {
-        outputs: {
+        generated: {
           some: { entityId: id },
         },
       },
-      include: { inputs: true },
+      include: { used: true },
     })
 
-    if (!edge) return
+    if (!activity) return
 
-    for (const input of edge.inputs) {
+    for (const input of activity.used) {
       await walk(input.entityId, d + 1)
     }
   }
@@ -101,14 +109,14 @@ export async function getProvenanceTimeline(entityId: string, depth: number = 1)
 }
 
 export async function getSiblings(entityId: string) {
-  const edge = await db.provenanceEdge.findFirst({
+  const activity = await db.activity.findFirst({
     where: {
-      outputs: {
+      generated: {
         some: { entityId },
       },
     },
     include: {
-      outputs: {
+      generated: {
         include: {
           entity: true,
         },
@@ -116,13 +124,49 @@ export async function getSiblings(entityId: string) {
     },
   })
 
-  if (!edge) return []
+  if (!activity) return []
 
-  return edge.outputs.map((o) => o.entity).filter((entity) => entity.id !== entityId)
+  return activity.generated.map((o) => o.entity).filter((entity) => entity.id !== entityId)
 }
 
-export async function getActorById(actorId: string) {
-  return db.actor.findUnique({
-    where: { id: actorId },
+export async function getAgentById(agentId: string) {
+  return db.agent.findUnique({
+    where: { id: agentId },
+  })
+}
+
+export async function getClassificationById(classificationId: string) {
+  return db.classification.findUnique({
+    where: { id: classificationId },
+    include: {
+      entity: true,
+      agent: true,
+    },
+  })
+}
+
+export async function getActivityById(activityId: string) {
+  return db.activity.findUnique({
+    where: { id: activityId },
+    include: {
+      used: true,
+      generated: true,
+      agent: true,
+    },
+  })
+}
+
+export async function getActivityByEntityId(entityId: string) {
+  return db.activity.findFirst({
+    where: {
+      generated: {
+        some: { entityId },
+      },
+    },
+    include: {
+      used: true,
+      generated: true,
+      agent: true,
+    },
   })
 }

@@ -1,13 +1,14 @@
 // services/product-api/test/deep-provenance.test.ts
 
+import { randomUUID } from 'crypto'
 import request from 'supertest'
 
 const BASE_URL = 'http://localhost:3001'
-const actor = {
-  id: 'test.actor.deep.1',
-  name: 'Deep Provenance Tester',
+const agent = {
+  id: `agent.deep.${randomUUID()}`,
+  name: 'Deep Provenance Agent',
   version: '1.0.0',
-  actorKind: 'automated',
+  agentKind: 'automated',
 }
 
 let rootId: string
@@ -15,21 +16,21 @@ let child1Id: string
 let child2Id: string
 let grandchildId: string
 
-describe('🌲 Deep Provenance Tree Tests', () => {
-  it('creates a root entity', async () => {
+describe('🌲 Deep Provenance Tree Tests (via performActivity)', () => {
+  it('creates a root entity via activity', async () => {
     const res = await request(BASE_URL)
-      .post('/api/product/create/entities')
+      .post('/api/product/perform/activity')
       .send({
-        actor,
-        entities: [
+        agent,
+        activity: {
+          action: 'initialize-knowledge-root',
+          timestamp: new Date().toISOString(),
+        },
+        usedEntityIds: [],
+        generatedEntities: [
           {
-            payload: { content: 'root node' },
-            provenance: {
-              action: 'root',
-              timestamp: new Date().toISOString(),
-              inputEntityIds: [],
-            },
-            classifications: [{ name: 'depth', value: '0' }],
+            payload: { content: 'Foundational insight: The Earth is round.' },
+            classifications: [{ name: 'origin', value: 'assertion' }],
           },
         ],
       })
@@ -38,52 +39,47 @@ describe('🌲 Deep Provenance Tree Tests', () => {
     rootId = res.body.entities[0].id
   })
 
-  it('creates a single edge that outputs both child1 and child2', async () => {
-    const res1 = await request(BASE_URL)
-      .post('/api/product/create/entities')
+  it('creates child1 and child2 from root in one activity (sibling test)', async () => {
+    const res = await request(BASE_URL)
+      .post('/api/product/perform/activity')
       .send({
-        actor,
-        entities: [
+        agent,
+        activity: {
+          action: 'derive-implications',
+          timestamp: new Date().toISOString(),
+        },
+        usedEntityIds: [rootId],
+        generatedEntities: [
           {
-            payload: { content: 'child 1' },
-            provenance: {
-              action: 'fork',
-              timestamp: new Date().toISOString(),
-              inputEntityIds: [rootId],
-            },
-            classifications: [{ name: 'depth', value: '1' }],
+            payload: { content: 'The horizon curves at altitude.' },
+            classifications: [{ name: 'evidence', value: 'visual' }],
           },
           {
-            payload: { content: 'child 2' },
-            provenance: {
-              action: 'fork',
-              timestamp: new Date().toISOString(),
-              inputEntityIds: [rootId],
-            },
-            classifications: [{ name: 'depth', value: '1' }],
+            payload: { content: 'Global circumnavigation is possible.' },
+            classifications: [{ name: 'inference', value: 'navigation' }],
           },
         ],
       })
 
-    expect(res1.statusCode).toBe(201)
-    child1Id = res1.body.entities[0].id
-    child2Id = res1.body.entities[1].id
+    expect(res.statusCode).toBe(201)
+    child1Id = res.body.entities[0].id
+    child2Id = res.body.entities[1].id
   })
 
-  it('creates a grandchild from child 1', async () => {
+  it('creates grandchild from child1', async () => {
     const res = await request(BASE_URL)
-      .post('/api/product/create/entities')
+      .post('/api/product/perform/activity')
       .send({
-        actor,
-        entities: [
+        agent,
+        activity: {
+          action: 'model-extension',
+          timestamp: new Date().toISOString(),
+        },
+        usedEntityIds: [child1Id],
+        generatedEntities: [
           {
-            payload: { content: 'grandchild' },
-            provenance: {
-              action: 'transform',
-              timestamp: new Date().toISOString(),
-              inputEntityIds: [child1Id],
-            },
-            classifications: [{ name: 'depth', value: '2' }],
+            payload: { content: 'Satellite images confirm curvature.' },
+            classifications: [{ name: 'proof', value: 'aerial' }],
           },
         ],
       })
@@ -92,23 +88,24 @@ describe('🌲 Deep Provenance Tree Tests', () => {
     grandchildId = res.body.entities[0].id
   })
 
-  it('fetches full ancestry for the grandchild', async () => {
+  it('resolves ancestry from grandchild back to root', async () => {
     const res = await request(BASE_URL)
       .get('/api/product/ancestry')
-      .query({ entityId: grandchildId, depth: 3 })
+      .query({ entityId: grandchildId, depth: 5 })
 
     expect(res.statusCode).toBe(200)
     const ids = res.body
     expect(ids).toContain(rootId)
     expect(ids).toContain(child1Id)
     expect(ids).toContain(grandchildId)
-    expect(ids).not.toContain(child2Id) // not in the direct path
+    expect(ids).not.toContain(child2Id) // not in the chain
   })
 
-  it('finds siblings of child1 and child2 correctly', async () => {
+  it('detects sibling relationship between child1 and child2', async () => {
     const res1 = await request(BASE_URL)
       .get('/api/product/siblings')
       .query({ entityId: child1Id })
+
     expect(res1.statusCode).toBe(200)
     const siblings1 = res1.body.map((e: any) => e.id)
     expect(siblings1).toContain(child2Id)
@@ -116,6 +113,7 @@ describe('🌲 Deep Provenance Tree Tests', () => {
     const res2 = await request(BASE_URL)
       .get('/api/product/siblings')
       .query({ entityId: child2Id })
+
     expect(res2.statusCode).toBe(200)
     const siblings2 = res2.body.map((e: any) => e.id)
     expect(siblings2).toContain(child1Id)

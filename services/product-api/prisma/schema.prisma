@@ -1,5 +1,5 @@
 /// Marl0 Product Layer Schema v0.1
-/// Primary data model: Entity, Classification, ProvenanceEdge, Actor
+/// Primary data model: Entity, Classification, Activity, Agent
 /// Relationships: All causal and classification relationships explicitly modeled
 
 /// Table namespace: product_
@@ -14,18 +14,15 @@ datasource db {
 }
 
 model Entity {
-  id              String              @id @default(cuid())
+  id              String              @id @default(uuid())
   createdById     String              @map("created_by_id")
-  createdBy       Actor               @relation("entity_created_by", fields: [createdById], references: [id])
-
+  createdBy       Agent               @relation("entity_created_by", fields: [createdById], references: [id])
   payload         Json
-
-  outputFrom      ProvenanceOutput[] @relation("entity_outputs")
-  inputTo         ProvenanceInput[]  @relation("entity_inputs")
-
-  classifications Classification[]   @relation("entity_classifications")
-
-  createdAt       DateTime            @default(now()) @map("created_at")
+  classifications Classification[]    @relation("entity_classifications")
+  outputFrom      ProvenanceOutput[]  @relation("entity_outputs")
+  inputTo         ProvenanceInput[]   @relation("entity_inputs")
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
   deletedAt       DateTime?           @map("deleted_at")
 
   @@index([createdById])
@@ -33,103 +30,89 @@ model Entity {
   @@map("product_entity")
 }
 
-model ProvenanceEdge {
-  id           String               @id @default(cuid())
-  actorId      String               @map("actor_id")
-  actor        Actor                @relation("provenance_edge_actor", fields: [actorId], references: [id])
+model Activity {
+  id          String           @id @default(uuid())
+  action      String
+  timestamp   DateTime         @default(now())
+  agentId     String           @map("agent_id")
+  agent       Agent            @relation("activity_agent", fields: [agentId], references: [id])
+  used        ProvenanceInput[] @relation("activity_used")
+  generated   ProvenanceOutput[] @relation("activity_generated")
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  deletedAt   DateTime?
 
-  timestamp    DateTime
-  action       String
-  parameters   Json?
-  notes        String?
-
-  inputs       ProvenanceInput[]    @relation("provenance_inputs")
-  outputs      ProvenanceOutput[]   @relation("provenance_outputs")
-
-  deletedAt    DateTime?            @map("deleted_at")
-
-  @@index([actorId])
-  @@index([timestamp])
-  @@index([deletedAt])
-  @@map("product_provenance_edge")
+  @@index([agentId])
+  @@map("product_activity")
 }
 
 model ProvenanceInput {
-  id                 String           @id @default(cuid())
-  provenanceEdgeId   String           @map("provenance_edge_id")
-  provenanceEdge     ProvenanceEdge  @relation("provenance_inputs", fields: [provenanceEdgeId], references: [id])
+  id            String   @id @default(uuid())
+  activityId    String   @map("activity_id")
+  activity      Activity @relation("activity_used", fields: [activityId], references: [id])
+  entityId      String   @map("entity_id")
+  entity        Entity   @relation("entity_inputs", fields: [entityId], references: [id])
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  deletedAt     DateTime?
 
-  entityId           String           @map("entity_id")
-  entity             Entity           @relation("entity_inputs", fields: [entityId], references: [id])
-
-  @@index([provenanceEdgeId])
-  @@index([entityId])
-  @@index([provenanceEdgeId, entityId])
+  @@index([activityId])
+  @@index([activityId, entityId])
   @@map("product_provenance_input")
 }
 
 model ProvenanceOutput {
-  id                 String           @id @default(cuid())
-  provenanceEdgeId   String           @map("provenance_edge_id")
-  provenanceEdge     ProvenanceEdge  @relation("provenance_outputs", fields: [provenanceEdgeId], references: [id])
+  id            String   @id @default(uuid())
+  activityId    String   @map("activity_id")
+  activity      Activity @relation("activity_generated", fields: [activityId], references: [id])
+  entityId      String   @map("entity_id")
+  entity        Entity   @relation("entity_outputs", fields: [entityId], references: [id])
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  deletedAt     DateTime?
 
-  entityId           String           @map("entity_id")
-  entity             Entity           @relation("entity_outputs", fields: [entityId], references: [id])
-
-  @@index([provenanceEdgeId])
-  @@index([entityId])
-  @@index([provenanceEdgeId, entityId])
+  @@index([activityId])
+  @@index([activityId, entityId])
   @@map("product_provenance_output")
 }
 
-model Actor {
-  id               String               @id
-  name             String
-  version          String
-  actorKind        String               @map("actor_kind")
-  actorMethod      String?              @map("actor_method")
-
-  createdEntities  Entity[]             @relation("entity_created_by")
-  provenanceEdges  ProvenanceEdge[]     @relation("provenance_edge_actor")
-  classifications  Classification[]     @relation("classification_actor")
-
-  createdAt        DateTime             @default(now()) @map("created_at")
-  deletedAt        DateTime?            @map("deleted_at")
+model Agent {
+  id              String           @id @default(uuid())
+  name            String
+  version         String
+  agentKind       String           @map("agent_kind")
+  agentMethod     String?          @map("agent_method")
+  activities      Activity[]       @relation("activity_agent")
+  classifications Classification[] @relation("classification_agent")
+  createdEntities Entity[]         @relation("entity_created_by")
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  deletedAt       DateTime?
 
   @@index([name])
-  @@index([actorKind])
+  @@index([agentKind])
   @@index([deletedAt])
-  @@map("product_actor")
+  @@map("product_agent")
 }
 
 model Classification {
-  id                  String           @id @default(cuid())
-  entityId            String           @map("entity_id")
-  entity              Entity           @relation("entity_classifications", fields: [entityId], references: [id])
-
-  actorId             String           @map("actor_id")
-  actor               Actor            @relation("classification_actor", fields: [actorId], references: [id])
-
-  name                String
-  value               String
-
-  confidence          Float?
-  namespace           String?
-  taxonomyVersionId   String?          @map("taxonomy_version_id")
-  
-  supersedesId        String?          @map("supersedes_id")
-  supersedes          Classification?  @relation("classification_supersedes", fields: [supersedesId], references: [id])
-  supersededBy        Classification[] @relation("classification_supersedes")
-  
-  timestamp           DateTime         @default(now())
-  deletedAt           DateTime?        @map("deleted_at")
+  id              String   @id @default(uuid())
+  entityId        String   @map("entity_id")
+  entity          Entity   @relation("entity_classifications", fields: [entityId], references: [id])
+  agentId         String   @map("agent_id")
+  agent           Agent    @relation("classification_agent", fields: [agentId], references: [id])
+  name            String
+  value           String
+  confidence      Float?
+  namespace       String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  deletedAt       DateTime?
 
   @@unique([entityId, name])
   @@index([entityId])
-  @@index([actorId])
+  @@index([agentId])
   @@index([name])
   @@index([namespace])
-  @@index([deletedAt])
-  @@index([entityId, name])
   @@map("product_classification")
 }

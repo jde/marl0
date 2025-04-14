@@ -1,11 +1,11 @@
 // services/product/types.ts
 
-export type ActorContext = {
+export type AgentContext = {
   id: string
   name: string
   version: string
-  actorKind: 'human' | 'automated' | 'hybrid'
-  actorMethod?: string
+  agentKind: 'human' | 'automated' | 'hybrid'
+  agentMethod?: string
 }
 
 export type ClassificationInput = {
@@ -17,38 +17,56 @@ export type ClassificationInput = {
   overrideId?: string
 }
 
-export type CreateEntitiesArgs = {
-  actor: ActorContext
-  entities: {
-    payload: any
-    provenance?: {
-      action: string
-      timestamp: string
-      parameters?: any
-      inputEntityIds: string[]
-    }
-    classifications?: ClassificationInput[]
-  }[]
+export type ActivityInput = {
+  payload: any
+  classifications?: ClassificationInput[]
 }
 
-export type CreateEntitiesResult = {
-  entities: any[] // Will be typed as Prisma.Entity[] if imported
-  provenanceEdges: any[] // Will be typed as Prisma.ProvenanceEdge[] if imported
+export type PerformActivityArgs = {
+  agent: AgentContext
+  activity: {
+    action: string
+    timestamp: string
+  }
+  usedEntityIds: string[]
+  generatedEntities: ActivityInput[]
 }
 
 export type ClassifyEntityArgs = {
-  actor: ActorContext
+  agent: AgentContext
   entityId: string
   classification: ClassificationInput
 }
 
 export type UpsertClassificationArgs = {
-  actor: ActorContext
+  agent: AgentContext
   entityId: string
   name: string
   value: string
   confidence?: number
   namespace?: string
-  taxonomyVersionId?: string
-  overrideId?: string
+}
+
+// Deprecated
+export type CreateEntitiesArgs = {
+  agent: AgentContext
+  entities: Array<{
+    payload: any
+    classifications?: Array<{
+      name: string
+      value: string
+      confidence?: number
+      namespace?: string
+    }>
+    provenance?: {
+      action: string
+      timestamp: string
+      inputEntityIds: string[]
+    }
+  }>
+}
+
+export type CreateEntitiesResult = {
+  entities: any[] // Will be typed as Prisma.Entity[] if imported
+  activities: any[] // Will be typed as Prisma.Activity[] if imported
 }

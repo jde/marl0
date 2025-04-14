@@ -1,7 +1,6 @@
 import * as Read from '@/services/read'
-import { CreateEntitiesArgs } from '@/services/types'
 import * as Utils from '@/services/utils'
-import * as Write from '@/services/write'
+import { ensureAgent, performActivity } from '@/services/write'
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 
@@ -19,22 +18,37 @@ type RouteDefinition = {
 
 const routes: RouteDefinition[] = [
   {
-    method: 'POST',
-    routeParams: ['create', 'entities'],
-    routeHandler: async ({ body }) => {
-      const parsed = z.object({
-        actor: z.object({
-          id: z.string(),
+  method: 'POST',
+  routeParams: ['perform', 'activity'],
+  routeHandler: async ({ body }) => {
+    const parsed = z.object({
+      agent: z.object({
+        id: z.string(),
+        name: z.string(),
+        version: z.string(),
+        agentKind: z.enum(['human', 'automated', 'hybrid']),
+        agentMethod: z.string().optional(),
+      }),
+      activity: z.object({
+        action: z.string(),
+        timestamp: z.string(),
+      }),
+      usedEntityIds: z.array(z.string()),
+      generatedEntities: z.array(z.object({
+        payload: z.any(),
+        classifications: z.array(z.object({
           name: z.string(),
-          version: z.string(),
-          actorKind: z.enum(['human', 'automated', 'hybrid']),
-          actorMethod: z.string().optional(),
-        }),
-        entities: z.array(z.any()),
-      }).parse(body) satisfies CreateEntitiesArgs
+          value: z.string(),
+          confidence: z.number().optional(),
+          namespace: z.string().optional(),
+          taxonomyVersionId: z.string().optional(),
+          overrideId: z.string().optional(),
+        })).optional()
+      })),
+    }).parse(body)
 
-      await Write.ensureActor(parsed.actor)
-      return Write.createEntities(parsed.actor, parsed.entities)
+    await ensureAgent(parsed.agent)
+    return performActivity(parsed)
     },
   },
   {
@@ -44,8 +58,8 @@ const routes: RouteDefinition[] = [
   },
   {
     method: 'GET',
-    routeParams: ['actor'],
-    routeHandler: async ({ query }) => Read.getActorById(query.get('id') || ''),
+    routeParams: ['agent'],
+    routeHandler: async ({ query }) => Read.getAgentById(query.get('id') || ''),
   },
   {
     method: 'GET',

@@ -73,7 +73,7 @@ export default async function EntityIndexPage({
         {entities.map((entity) => (
           <li key={entity.id} className="border border-gray-200 p-4 rounded bg-gray-50">
             <Link href={`/entity/${entity.id}`} className="text-blue-600 hover:underline">
-              {entity.id}
+              {JSON.stringify(entity.payload, null, 2)}
             </Link>
             <div className="text-sm text-gray-600 mt-1">Created at: {new Date(entity.createdAt).toLocaleString()}</div>
             <div className="text-sm text-gray-600">Created by: {entity.createdById}</div>

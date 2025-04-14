@@ -1,86 +1,73 @@
-// tests/product-api/product-api.test.ts
+// services/product-api/test/product-api.test.ts
 
-import request from 'supertest'
+import { getClassifications, getEntityById, getProvenance } from '@/services/read'
+import { getConsensusLabels } from '@/services/utils'
+import { ensureAgent, performActivity } from '@/services/write'
+import { randomUUID } from 'crypto'
 
-const BASE_URL = 'http://localhost:3001'
-
-const actor = {
-  id: 'test.actor.1',
-  name: 'Test Actor',
-  version: '0.1.0',
-  actorKind: 'automated',
+const agent = {
+  id: `agent.test.${randomUUID()}`,
+  name: 'Test Agent',
+  version: '1.0.0',
+  agentKind: 'automated' as const,
+  agentMethod: 'test-runner',
 }
 
 describe('🧪 Product API E2E Test Suite', () => {
   let entityId: string
 
-  it('POST /api/product/create/entities creates entity + provenance + classification', async () => {
-    const res = await request(BASE_URL)
-      .post('/api/product/create/entities')
-      .send({
-        actor,
-        entities: [
-          {
-            payload: { content: 'hello marl0' },
-            provenance: {
-              action: 'test-ingest',
-              timestamp: new Date().toISOString(),
-              inputEntityIds: [],
+  it('creates entity with provenance and classification', async () => {
+    await ensureAgent(agent)
+    
+    const { entities } = await performActivity({
+      agent,
+      activity: {
+        action: 'ingest-fact',
+        timestamp: new Date().toISOString(),
+      },
+      usedEntityIds: [],
+      generatedEntities: [
+        {
+          payload: { content: 'Water freezes at 0°C' },
+          classifications: [
+            {
+              name: 'domain',
+              value: 'physics',
+              confidence: 1,
+              namespace: 'test-suite',
             },
-            classifications: [
-              {
-                name: 'source',
-                value: 'test-suite',
-                confidence: 1,
-              },
-            ],
-          },
-        ],
-      })
+          ],
+        },
+      ],
+    })
 
-    expect(res.statusCode).toBe(201)
-    expect(res.body.entities.length).toBe(1)
-    expect(res.body.provenanceEdges.length).toBe(1)
-    entityId = res.body.entities[0].id
+    expect(entities.length).toBe(1)
+    entityId = entities[0].id
   })
 
-  it('GET /api/product/entity returns the created entity', async () => {
-    const res = await request(BASE_URL)
-      .get('/api/product/entity')
-      .query({ id: entityId })
-
-    expect(res.statusCode).toBe(200)
-    expect(res.body.id).toBe(entityId)
-    expect(res.body.payload.content).toBe('hello marl0')
+  it('retrieves the created entity', async () => {
+    const entity = await getEntityById(entityId)
+    expect(entity).toBeDefined()
+    expect(entity?.id).toBe(entityId)
+    expect((entity?.payload as { content: string }).content).toBe('Water freezes at 0°C')
   })
 
-  it('GET /api/product/classifications returns classifications for the entity', async () => {
-    const res = await request(BASE_URL)
-      .get('/api/product/classifications')
-      .query({ entityId })
-
-    expect(res.statusCode).toBe(200)
-    expect(res.body.length).toBeGreaterThan(0)
-    expect(res.body[0].name).toBe('source')
-    expect(res.body[0].value).toBe('test-suite')
+  it('retrieves classifications for the entity', async () => {
+    const classifications = await getClassifications(entityId)
+    expect(classifications.length).toBeGreaterThan(0)
+    expect(classifications[0].name).toBe('domain')
+    expect(classifications[0].value).toBe('physics')
   })
 
-  it('GET /api/product/provenance returns the provenance edge', async () => {
-    const res = await request(BASE_URL)
-      .get('/api/product/provenance')
-      .query({ entityId })
-
-    expect(res.statusCode).toBe(200)
-    expect(res.body.length).toBeGreaterThan(0)
-    expect(res.body[0].action).toBe('test-ingest')
+  it('retrieves the provenance activity', async () => {
+    const provenance = await getProvenance(entityId)
+    expect(provenance.length).toBeGreaterThan(0)
+    const match = provenance.find((p: any) => p.action === 'ingest-fact')
+    expect(match).toBeDefined()
   })
 
-  it('GET /api/product/consensus/labels returns classification consensus', async () => {
-    const res = await request(BASE_URL)
-      .get('/api/product/consensus/labels')
-      .query({ entityId })
-
-    expect(res.statusCode).toBe(200)
-    expect(res.body.source).toBe('test-suite')
+  it('retrieves classification consensus', async () => {
+    const consensus = await getConsensusLabels(entityId)
+    expect(consensus.domain).toBe('physics')
   })
 })
