@@ -1,0 +1,128 @@
+/// Marl0 Product Layer Schema v0.1
+/// Primary data model: Entity, Classification, Activity, Agent
+/// Relationships: All causal and classification relationships explicitly modeled
+
+/// Table namespace: product_
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Entity {
+  id              String              @id @default(uuid())
+  createdById     String              @map("created_by_id")
+  createdBy       Agent               @relation("entity_created_by", fields: [createdById], references: [id])
+  payload         Json
+  classifications Classification[]    @relation("entity_classifications")
+  outputFrom      ProvenanceOutput[]  @relation("entity_outputs")
+  inputTo         ProvenanceInput[]   @relation("entity_inputs")
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  deletedAt       DateTime?           @map("deleted_at")
+
+  @@index([createdById])
+  @@index([deletedAt])
+  @@map("product_entity")
+}
+
+model Activity {
+  id          String           @id @default(uuid())
+  action      String
+  timestamp   DateTime         @default(now())
+  agentId     String           @map("agent_id")
+  agent       Agent            @relation("activity_agent", fields: [agentId], references: [id])
+  used        ProvenanceInput[] @relation("activity_used")
+  generated   ProvenanceOutput[] @relation("activity_generated")
+  generatedClassifications Classification[] @relation("activity_generated_classifications")
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  deletedAt   DateTime?
+
+  @@index([agentId])
+  @@map("product_activity")
+}
+
+model ProvenanceInput {
+  id            String   @id @default(uuid())
+  activityId    String   @map("activity_id")
+  activity      Activity @relation("activity_used", fields: [activityId], references: [id])
+  entityId      String   @map("entity_id")
+  entity        Entity   @relation("entity_inputs", fields: [entityId], references: [id])
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  deletedAt     DateTime?
+
+  @@index([activityId])
+  @@index([activityId, entityId])
+  @@map("product_provenance_input")
+}
+
+model ProvenanceOutput {
+  id            String   @id @default(uuid())
+  activityId    String   @map("activity_id")
+  activity      Activity @relation("activity_generated", fields: [activityId], references: [id])
+  entityId      String   @map("entity_id")
+  entity        Entity   @relation("entity_outputs", fields: [entityId], references: [id])
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  deletedAt     DateTime?
+
+  @@index([activityId])
+  @@index([activityId, entityId])
+  @@map("product_provenance_output")
+}
+
+model Agent {
+  id              String           @id @default(uuid())
+  name            String
+  version         String
+  agentKind       String           @map("agent_kind")
+  agentMethod     String?          @map("agent_method")
+  activities      Activity[]       @relation("activity_agent")
+  classifications Classification[] @relation("classification_agent")
+  createdEntities Entity[]         @relation("entity_created_by")
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  deletedAt       DateTime?
+
+  @@index([name])
+  @@index([agentKind])
+  @@index([deletedAt])
+  @@map("product_agent")
+}
+
+model Classification {
+  id              String   @id @default(uuid())
+
+  entityId        String   @map("entity_id")
+  entity          Entity   @relation("entity_classifications", fields: [entityId], references: [id])
+
+  agentId         String   @map("agent_id")
+  agent           Agent    @relation("classification_agent", fields: [agentId], references: [id])
+
+  activityId      String?
+  activity        Activity? @relation("activity_generated_classifications", fields: [activityId], references: [id])
+  
+  supersedesId        String?
+  supersedes          Classification? @relation("ClassificationSupersession", fields: [supersedesId], references: [id])
+  supersededBy        Classification[] @relation("ClassificationSupersession")
+  
+  name            String
+  value           String
+  confidence      Float?
+  namespace       String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  deletedAt       DateTime?
+
+  @@index([entityId])
+  @@index([agentId])
+  @@index([name])
+  @@index([namespace])
+  @@map("product_classification")
+}

@@ -57,6 +57,7 @@ rebuild: validate
 	$(DC) up -d --force-recreate
 
 rebuild-%:
+	$(DC) down $*
 	$(DC) build --no-cache $*
 	$(DC) up -d --force-recreate $*
 
@@ -146,6 +147,9 @@ init-local-llm:
 	$(MAKE) wait-for-local-llm
 	@echo "✅ Local LLM environment is ready!"
 
+## Run the bootstrap container to initialize DB/user
+bootstrap:
+	docker-compose --env-file .env.dev up --build --abort-on-container-exit bootstrap
 
 # 🧩 Snapshot all dashboards from Grafana
 GRAFANA_USER ?= admin
