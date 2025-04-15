@@ -98,12 +98,20 @@ model Agent {
 
 model Classification {
   id              String   @id @default(uuid())
+
   entityId        String   @map("entity_id")
   entity          Entity   @relation("entity_classifications", fields: [entityId], references: [id])
+
   agentId         String   @map("agent_id")
   agent           Agent    @relation("classification_agent", fields: [agentId], references: [id])
+
   activityId      String?
   activity        Activity? @relation("activity_generated_classifications", fields: [activityId], references: [id])
+  
+  supersedesId        String?
+  supersedes          Classification? @relation("ClassificationSupersession", fields: [supersedesId], references: [id])
+  supersededBy        Classification[] @relation("ClassificationSupersession")
+  
   name            String
   value           String
   confidence      Float?
@@ -112,7 +120,6 @@ model Classification {
   updatedAt       DateTime @updatedAt
   deletedAt       DateTime?
 
-  @@unique([entityId, name])
   @@index([entityId])
   @@index([agentId])
   @@index([name])

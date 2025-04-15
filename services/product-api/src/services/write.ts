@@ -26,10 +26,19 @@ export async function performActivity({
   agent,
   activity,
   usedEntityIds,
-  generatedEntities,
-}: PerformActivityArgs) {
+  generatedEntities = [],
+  classifications = [],
+}: PerformActivityArgs & {
+  classifications?: {
+    entityId: string
+    name: string
+    value: string
+    confidence?: number
+    namespace?: string
+    supersedesId?: string
+  }[]
+}) {
   return db.$transaction(async (tx) => {
-    // Create the new entities
     const createdEntities = await Promise.all(
       generatedEntities.map(async (entry) => {
         const created = await tx.entity.create({
@@ -56,7 +65,6 @@ export async function performActivity({
       })
     )
 
-    // Create the activity and link everything
     const activityRecord = await tx.activity.create({
       data: {
         action: activity.action,
@@ -66,6 +74,23 @@ export async function performActivity({
         generated: { create: createdEntities.map((e) => ({ entityId: e.id })) },
       },
     })
+
+    if (classifications.length > 0) {
+      for (const c of classifications) {
+        await tx.classification.create({
+          data: {
+            entityId: c.entityId,
+            agentId: agent.id,
+            activityId: activityRecord.id,
+            name: c.name,
+            value: c.value,
+            confidence: c.confidence,
+            namespace: c.namespace,
+            supersedesId: c.supersedesId,
+          },
+        })
+      }
+    }
 
     return {
       activity: activityRecord,
