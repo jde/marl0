@@ -82,6 +82,7 @@ services:
       - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
       - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=PLAINTEXT
       - ALLOW_PLAINTEXT_LISTENER=yes
+      - KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE=true
     depends_on:
       - zookeeper
     healthcheck:
@@ -89,7 +90,15 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
-      
+    
+  kafka-init:
+    image: bitnami/kafka:latest
+    depends_on:
+      kafka:
+        condition: service_healthy
+    entrypoint: >
+      bash -c "sleep 2 && kafka-topics.sh --create --if-not-exists --bootstrap-server kafka:9092 --replication-factor 1 --partitions 1 --topic sitemap.entries && echo '✅ Kafka topic ready.'"
+
   zookeeper:
     image: bitnami/zookeeper:latest
     environment:
@@ -187,11 +196,11 @@ services:
     depends_on:
       - prometheus
 
-  curl:
-    image: curlimages/curl:latest
-    entrypoint: ["sleep", "infinity"]
-    networks:
-      - default
+  # curl:
+  #   image: curlimages/curl:latest
+  #   entrypoint: ["sleep", "infinity"]
+  #   networks:
+  #     - default
 
   # Pull models at build time
   # Keep up to date with all models we want to use locally
@@ -217,3 +226,22 @@ services:
       MARL0_POSTGRES_PASSWORD: marl0
       MARL0_POSTGRES_DB: marl0
     restart: "no"
+
+  #
+  # Agents
+  #
+
+  sitemap-watcher:
+    build:
+      context: ./agents/functions/sitemap-watcher-go
+      dockerfile: ./Dockerfile
+    container_name: sitemap-watcher
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+    volumes:
+      - ${AGENT_SITEMAP_WATCHER_DATA_DIR}:/app/seen-urls.db
+    environment:
+      - KAFKA_BROKERS=localhost:9092
+    ports:
+      - "9100:9100"
