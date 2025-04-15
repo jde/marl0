@@ -16,6 +16,7 @@
   "dependencies": {
     "@prisma/client": "^6.6.0",
     "@types/uuid": "^10.0.0",
+    "kafkajs": "^2.2.4",
     "next": "15.3.0",
     "pino": "^9.6.0",
     "prisma": "^6.6.0",
