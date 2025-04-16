@@ -39,6 +39,19 @@ services:
       timeout: 3s
       retries: 15
 
+  view-elasticsearch:
+    build:
+      context: ./agents/view-elasticsearch
+    container_name: view-elasticsearch
+    depends_on:
+      kafka:
+        condition: service_healthy
+    environment:
+      - KAFKA_BROKERS=kafka:9092
+      - PRODUCT_API_URL=http://product-api:3000
+      # optional experiment filter
+      # - EXPERIMENT=my-experiment
+
   # ingestor:
   #   build:
   #     context: ./services/ingestor

@@ -1,3 +1,6 @@
 go 1.24.2
 
-use ./agents/functions/sitemap-watcher-go
+use (
+	./agents/functions/sitemap-watcher-go
+	./agents/view-elasticsearch
+)
