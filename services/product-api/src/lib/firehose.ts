@@ -11,7 +11,6 @@ let connected = false
 export async function sendToFirehose(event: {
   event_type: 'entity.created' | 'classification.added'
   entity_id: string
-  entity_type: string
   activity_id: string
   agent: string
   agent_version: string

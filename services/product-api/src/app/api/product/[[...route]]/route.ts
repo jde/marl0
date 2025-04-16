@@ -23,7 +23,7 @@ const routes: RouteDefinition[] = [
     routeParams: ['perform', 'activity'],
     routeHandler: async ({ body }) => {
       await Write.ensureAgent(body.agent)
-      return Write.performActivity(body)
+      return Write.performActivityWithFirehose(body)
     },
   },
   {

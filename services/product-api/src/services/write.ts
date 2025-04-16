@@ -119,7 +119,6 @@ export async function performActivityWithFirehose(
       sendToFirehose({
         event_type: 'entity.created',
         entity_id: entity.id,
-        entity_type: typeof entity.payload,
         activity_id: result.activity.id,
         agent: args.agent.id,
         agent_version: args.agent.version,

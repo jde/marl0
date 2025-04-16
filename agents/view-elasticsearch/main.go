@@ -22,7 +22,7 @@ type FirehoseEvent struct {
 
 var (
 	kafkaTopic   = "marl0.firehose"
-	groupID      = "view-elasticsearch"
+	groupID      = "view-elasticsearch-00001"
 	productAPI   = os.Getenv("PRODUCT_API_URL")
 	experiment   = os.Getenv("EXPERIMENT") // optional
 )
@@ -66,9 +66,11 @@ func main() {
 			continue
 		}
 
-		if experiment != "" && event.Experiment != experiment {
-			continue // skip non-matching experiments
-		}
+		log.Printf("🔍 Event: %+v", event)
+
+		// if experiment != "" && event.Experiment != experiment {
+		// 	continue // skip non-matching experiments
+		// }
 
 		switch event.EventType {
 		case "entity.created":
