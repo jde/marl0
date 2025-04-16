@@ -23,7 +23,8 @@ services:
     ports:
       - "42420:3000"
     environment:
-      DATABASE_URL: postgres://marl0:marl0@postgres:5432/marl0
+      - DATABASE_URL=postgres://youruser:yourpass@postgres:5432/marl0
+      - KAFKAJS_NO_PARTITIONER_WARNING=1
     depends_on:
       postgres:
         condition: service_healthy
@@ -31,10 +32,10 @@ services:
         condition: service_completed_successfully
     volumes:
       - ./services/product-api:/app
-    command: npm run dev
+    command: sh -c "npx prisma migrate deploy && npm run dev"
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"]
-      interval: 1s                
+      interval: 10s                
       timeout: 3s
       retries: 15
 
@@ -230,8 +231,8 @@ services:
       POSTGRES_USER: youruser
       POSTGRES_PASSWORD: yourpass
       POSTGRES_DB: yourdb
-      MARL0_POSTGRES_USER: marl0
-      MARL0_POSTGRES_PASSWORD: marl0
+      MARL0_POSTGRES_USER: youruser
+      MARL0_POSTGRES_PASSWORD: yourpass
       MARL0_POSTGRES_DB: marl0
     restart: "no"
 
@@ -243,7 +244,7 @@ services:
     build:
       context: ./agents/functions/sitemap-watcher-go
       dockerfile: ./Dockerfile
-    container_name: sitemap-watcher
+    container_name: agent-sitemap-watcher
     depends_on:
       kafka-init:
         condition: service_completed_successfully
@@ -252,11 +253,22 @@ services:
     environment:
       - KAFKA_BROKERS=kafka:9092
 
+  story-writer:
+    build:
+      context: ./agents/story-writer
+      dockerfile: ./Dockerfile
+    container_name: agent-story-writer
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+    environment:
+      - KAFKA_BROKERS=kafka:9092
 
   story-fetcher:
     build:
       context: ./agents/story-fetcher
       dockerfile: Dockerfile
+    container_name: agent-story-fetcher
     depends_on:
       kafka-init:
         condition: service_completed_successfully

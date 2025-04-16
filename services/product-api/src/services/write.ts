@@ -75,7 +75,7 @@ export async function performActivity({
       },
     })
 
-    if (classifications.length > 0) {
+    if (classifications && classifications.length > 0) {
       for (const c of classifications) {
         await tx.classification.create({
           data: {

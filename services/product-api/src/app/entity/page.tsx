@@ -8,19 +8,21 @@ export default async function EntityIndexPage({
 }: {
   searchParams: Record<string, string | string[] | undefined>
 }) {
-  const page = parseInt(searchParams.page as string) || 1
+
+  const params = await searchParams
+  const page = parseInt(params.page as string) || 1
   const pageSize = 10
   const skip = (page - 1) * pageSize
 
   const where = {
-    createdById: searchParams.author
-      ? { contains: searchParams.author as string, mode: 'insensitive' }
+    createdById: params.author
+      ? { contains: params.author as string, mode: 'insensitive' }
       : undefined,
-    classifications: searchParams.classification
+    classifications: params.classification
       ? {
           some: {
-            name: (searchParams.classification as string).split(':')[0],
-            value: (searchParams.classification as string).split(':')[1],
+            name: (params.classification as string).split(':')[0],
+            value: (params.classification as string).split(':')[1],
           },
         }
       : undefined,
@@ -50,7 +52,7 @@ export default async function EntityIndexPage({
             type="text"
             name="author"
             placeholder="Filter by creator ID"
-            defaultValue={searchParams.author as string || ''}
+            defaultValue={params.author as string || ''}
             className="border border-gray-300 px-2 py-1 rounded"
           />
         </div>
@@ -60,7 +62,7 @@ export default async function EntityIndexPage({
             type="text"
             name="classification"
             placeholder="e.g. tone:sarcastic"
-            defaultValue={searchParams.classification as string || ''}
+            defaultValue={params.classification as string || ''}
             className="border border-gray-300 px-2 py-1 rounded"
           />
         </div>

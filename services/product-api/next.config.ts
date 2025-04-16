@@ -1,7 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  logging: {
+    incomingRequests: (req) => req.url !== "/api/health",
+  },
 };
 
 export default nextConfig;

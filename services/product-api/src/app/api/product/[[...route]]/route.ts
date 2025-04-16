@@ -144,6 +144,11 @@ export async function POST(req: NextRequest) {
     const result = await matched.routeHandler({ route, query: url.searchParams, body })
     return NextResponse.json(result, { status: 201 })
   } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 400 })
+    console.error(`Error in POST /api/product/${route.join('/')}:`, err)
+
+    return new Response(
+      JSON.stringify({ error: "invalid request", detail: err instanceof Error ? err.message : err }),
+      { status: 400 }
+    )
   }
 }
