@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/segmentio/kafka-go"
+	es "github.com/elastic/go-elasticsearch/v8"
 )
 
 type FirehoseEvent struct {
@@ -25,6 +26,7 @@ var (
 	productAPI   = os.Getenv("PRODUCT_API_URL")
 	experiment   = os.Getenv("EXPERIMENT") // optional
 )
+var esClient *es.Client
 
 func main() {
 	log.Printf("🧠 view-elasticsearch starting. Subscribing to %s", kafkaTopic)
@@ -37,6 +39,19 @@ func main() {
 		MaxBytes: 10e6,
 	})
 	defer r.Close()
+
+	cfg := es.Config{
+		Addresses: []string{
+			"http://elasticsearch:9200",
+		},
+	}
+	client, err := es.NewClient(cfg)
+	if err != nil {
+		log.Fatalf("❌ Elasticsearch client error: %v", err)
+		return
+	}
+	log.Printf("✅ Elasticsearch client initialized")
+	esClient = client
 
 	for {
 		msg, err := r.ReadMessage(context.Background())
@@ -83,6 +98,19 @@ func handleEntity(entityID string) {
 		return
 	}
 
-	// TODO: Push to Elasticsearch
+	jsonBody, _ := json.Marshal(body)
+	res, err := esClient.Index("entities", strings.NewReader(string(jsonBody)))
+	if err != nil {
+		log.Printf("❌ Elasticsearch index error: %v", err)
+		return
+	}
+	defer res.Body.Close()
+
+	if res.IsError() {
+		log.Printf("⚠️ Failed to index entity: %s", res.String())
+	} else {
+		log.Printf("✅ Indexed entity %s", entityID)
+	}
+
 	log.Printf("📦 Indexed entity %s: %+v", entityID, body)
 }
