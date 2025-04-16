@@ -12,3 +12,6 @@ scrape_configs:
   - job_name: 'entity-extractor'
     static_configs:
       - targets: ['entity-extractor:3000']
+  - job_name: 'story-fetcher'
+    static_configs:
+      - targets: ['story-fetcher:9100']

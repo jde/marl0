@@ -120,6 +120,7 @@ func sendToKafka(writer *kafka.Writer, message any) error {
 		return err
 	}
 	msg := kafka.Message{
+		Key:   []byte(message["force-zero"]),
 		Value: jsonBytes,
 	}
 	return writer.WriteMessages(context.Background(), msg)
