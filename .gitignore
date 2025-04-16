@@ -6,3 +6,5 @@ docker_data/*/*
 **/dist/
 
 vendor/
+
+.DS_Store
