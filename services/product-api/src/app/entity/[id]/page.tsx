@@ -1,5 +1,6 @@
 // src/app/entity/[id]/page.tsx
 
+import { ProvenanceTimeline } from '@/components/browser/ProvenanceTimeline'
 import { db } from '@/lib/prisma'
 import { Activity, ProvenanceInput, ProvenanceOutput } from '@prisma/client'
 import Link from 'next/link'
@@ -49,6 +50,8 @@ export default async function EntityPage({ params }: { params: { id: string } })
   return (
     <div className="p-8 space-y-12">
       <Link href="/entity" className="text-blue-600 hover:underline">Back to Entity List</Link>
+
+      <ProvenanceTimeline entityId={entity.id} />
 
       <div className="text-center">
         <h1 className="text-3xl font-bold mb-2">Entity: {entity.id}</h1>

@@ -26,6 +26,7 @@
     "clsx": "^2.1.1",
     "kafkajs": "^2.2.4",
     "lucide-react": "^0.488.0",
+    "neo4j-driver": "^5.28.1",
     "next": "15.3.0",
     "pino": "^9.6.0",
     "prisma": "^6.6.0",

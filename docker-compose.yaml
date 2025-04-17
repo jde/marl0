@@ -65,6 +65,34 @@ services:
       - MEMGRAPH_URI=bolt://memgraph:7687
       - PRODUCT_API_URL=http://product-api:3000
  
+  view-lancedb:
+    build:
+      context: ./agents/view-lancedb
+    container_name: view-lancedb
+    depends_on:
+      kafka:
+        condition: service_healthy
+    environment:
+      - KAFKA_BROKERS=kafka:9092
+      - PRODUCT_API_URL=http://product-api:3000
+      - GROUP_ID=view-lancedb-0001
+    volumes:
+      - ${LANCEDB_DATA_DIR:-./docker_data/lancedb}:/data
+    #command: ["watchmedo", "auto-restart", "--directory=.", "--pattern=*.py", "--recursive", "-- python main.py"]
+
+  semantic-search-api:
+    build:
+      context: ./services/semantic-search-api
+    ports:
+      - "4282:8000"
+    environment:
+      - PRODUCT_API_URL=http://product-api:3000
+      - LANCEDB_PATH=/data
+    volumes:
+      - ./docker_data/lancedb:/data
+    depends_on:
+      - product-api
+
   # ingestor:
   #   build:
   #     context: ./services/ingestor

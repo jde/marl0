@@ -1,0 +1,10 @@
+lancedb
+requests
+sentence-transformers==2.2.2
+torch==2.1.2
+scipy==1.11.4
+huggingface_hub==0.14.1
+confluent-kafka
+pandas
+python-dotenv
+fastapi
