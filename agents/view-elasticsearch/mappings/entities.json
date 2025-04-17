@@ -1,0 +1,47 @@
+{
+  "mappings": {
+    "properties": {
+      "id": {
+        "type": "keyword"
+      },
+      "agent": {
+        "type": "keyword"
+      },
+      "agent_version": {
+        "type": "keyword"
+      },
+      "title": {
+        "type": "text"
+      },
+      "excerpt": {
+        "type": "text"
+      },
+      "content": {
+        "type": "text"
+      },
+      "url": {
+        "type": "keyword"
+      },
+      "source": {
+        "type": "keyword"
+      },
+      "section": {
+        "type": "keyword"
+      },
+      "has_video": {
+        "type": "boolean"
+      },
+      "received_at": {
+        "type": "date"
+      },
+      "classifications": {
+        "type": "nested",
+        "properties": {
+          "name": { "type": "keyword" },
+          "value": { "type": "keyword" },
+          "confidence": { "type": "float" }
+        }
+      }
+    }
+  }
+}

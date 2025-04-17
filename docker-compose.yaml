@@ -25,6 +25,7 @@ services:
     environment:
       - DATABASE_URL=postgres://youruser:yourpass@postgres:5432/marl0
       - KAFKAJS_NO_PARTITIONER_WARNING=1
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
     depends_on:
       postgres:
         condition: service_healthy

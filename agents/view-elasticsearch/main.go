@@ -24,7 +24,7 @@ type FirehoseEvent struct {
 
 var (
 	kafkaTopic   = "marl0.firehose"
-	groupID      = "view-elasticsearch-00003"
+	groupID      = "view-elasticsearch-00004"
 	productAPI   = os.Getenv("PRODUCT_API_URL")
 	experiment   = os.Getenv("EXPERIMENT") // optional
 )
