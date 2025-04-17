@@ -3,7 +3,7 @@
 import { randomUUID } from 'crypto'
 import request from 'supertest'
 
-const BASE_URL = 'http://localhost:3001'
+const BASE_URL = 'http://localhost:3000'
 const agent = {
   id: `agent.smoke.${randomUUID()}`,
   name: 'API Smoke Agent',

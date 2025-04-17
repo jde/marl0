@@ -10,6 +10,29 @@ export type ClassificationQueryOptions = {
   namespace?: string
 }
 
+export async function getClassificationById(id: string) {
+  const classification = await db.classification.findUniqueOrThrow({
+    where: { id },
+  })
+
+  return {
+    classification: {
+      id: classification.id,
+      name: classification.name,
+      value: classification.value,
+      confidence: classification.confidence,
+      namespace: classification.namespace,
+      entityId: classification.entityId,
+      supersedesId: classification.supersedesId,
+      agentId: classification.agentId,
+      activityId: classification.activityId,
+      createdAt: classification.createdAt,
+      updatedAt: classification.updatedAt,
+      deletedAt: classification.deletedAt,
+    },
+  }
+}
+
 /**
  * Returns the current working set of classifications for an entity,
  * filtered by optional trust and activity filters.

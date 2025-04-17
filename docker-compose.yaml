@@ -53,6 +53,18 @@ services:
       # optional experiment filter
       # - EXPERIMENT=my-experiment
 
+  view-memgraph:
+    build:
+      context: ./agents/view-memgraph
+    container_name: view-memgraph
+    depends_on:
+      kafka:
+        condition: service_healthy
+    environment:
+      - KAFKA_BROKERS=kafka:9092
+      - MEMGRAPH_URI=bolt://memgraph:7687
+      - PRODUCT_API_URL=http://product-api:3000
+ 
   # ingestor:
   #   build:
   #     context: ./services/ingestor
