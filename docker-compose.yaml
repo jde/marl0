@@ -348,4 +348,22 @@ services:
       - METRICS_PORT=9100
       - LOG_LEVEL=debug
 
-
+  mention-extractor:
+    container_name: agent-mention-extractor
+    build:
+      context: ./agents/mention-extractor
+      dockerfile: Dockerfile
+    depends_on:
+      kafka:
+        condition: service_healthy
+    environment:
+      - AGENT_ID=mention-extractor-v1
+      - AGENT_NAME=mention-extractor
+      - AGENT_VERSION=v1
+      - AGENT_KIND=automated
+      - AGENT_METHOD=mention-extraction
+      - KAFKA_BROKERS=kafka:9092
+      - PRODUCT_API_URL=http://product-api:3000
+      - MENTION_EXTRACTOR_GROUP_ID=mention-extractor-0001
+      - OLLAMA_URL=http://host.docker.internal:11434/api/generate
+      - OLLAMA_MODEL=gemma3:12b-it-qat

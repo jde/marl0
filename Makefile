@@ -61,6 +61,12 @@ rebuild-%:
 	$(DC) build --no-cache $*
 	$(DC) up -d --force-recreate $*
 
+rnl-%:
+	$(DC) down $*
+	$(DC) build --no-cache $*
+	$(DC) up -d --force-recreate $*
+	$(DC) logs -f $*
+
 ## Start stack in detached mode
 up: validate
 	$(DC) up -d
@@ -68,6 +74,9 @@ up: validate
 ## Stop running containers
 stop:
 	$(DC) stop
+
+stop-%:
+	$(DC) stop $*
 
 # 🧩 Restart specific service
 restart-%:
@@ -93,8 +102,8 @@ config:
 # ===============================
 
 llm-up:
-	@echo "🧠 Starting local LLM (nous-hermes)..."
-	ollama run nous-hermes
+	@echo "🧠 Starting local LLM (gemma3:12b-it-qat)..."
+	OLLAMA_NUM_THREAD=4 OLLAMA_NUM_CTX=2048 ollama run gemma3:12b-it-qat
 
 llm-down:
 	@echo "🛑 Stopping local LLM..."

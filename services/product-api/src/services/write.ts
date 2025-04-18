@@ -2,6 +2,7 @@
 import { sendToFirehose } from '@/lib/firehose'
 import { db } from '@/lib/prisma'
 import { AgentContext, PerformActivityArgs } from '@/services/types'
+import { v4 as uuidv4 } from 'uuid'
 
 export async function ensureAgent(agent: AgentContext) {
   return db.agent.upsert({
@@ -38,11 +39,16 @@ export async function performActivity({
     supersedesId?: string
   }[]
 }) {
+
+
   return db.$transaction(async (tx) => {
     const createdEntities = await Promise.all(
       generatedEntities.map(async (entry) => {
-        const created = await tx.entity.create({
+        const id = uuidv4() 
+
+        await tx.entity.create({
           data: {
+            id, 
             payload: entry.payload,
             createdById: agent.id,
           },
@@ -51,7 +57,7 @@ export async function performActivity({
         if (entry.classifications?.length) {
           await tx.classification.createMany({
             data: entry.classifications.map((c) => ({
-              entityId: created.id,
+              entityId: id, 
               agentId: agent.id,
               name: c.name,
               value: c.value,
@@ -61,9 +67,10 @@ export async function performActivity({
           })
         }
 
-        return created
+        return tx.entity.findUnique({ where: { id } }) // return full entity if needed
       })
     )
+
 
     const activityRecord = await tx.activity.create({
       data: {

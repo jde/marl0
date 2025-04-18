@@ -10,6 +10,7 @@ import (
 	"os"
 	"strings"
 	"time"
+
 	"github.com/segmentio/kafka-go"
 )
 
@@ -22,16 +23,16 @@ func debugLog(msg string, args ...any) {
 }
 
 type CleanedStory struct {
-	URL         string `json:"url"`
-	Title       string `json:"title"`
-	Author      string `json:"author"`
-	Excerpt     string `json:"excerpt"`
-	Content     string `json:"content"`
-	HasVideo    bool   `json:"has_video"`
-	Source      string `json:"source"`
-	Section     string `json:"section"`
-	OriginalTS  string `json:"original_timestamp"`
-	ReceivedAt  string `json:"received_at"`
+	URL        string `json:"url"`
+	Title      string `json:"title"`
+	Author     string `json:"author"`
+	Excerpt    string `json:"excerpt"`
+	Content    string `json:"content"`
+	HasVideo   bool   `json:"has_video"`
+	Source     string `json:"source"`
+	Section    string `json:"section"`
+	OriginalTS string `json:"original_timestamp"`
+	ReceivedAt string `json:"received_at"`
 }
 
 type Classification struct {
@@ -50,25 +51,24 @@ type AgentContext struct {
 }
 
 type ActivityDetails struct {
-	Action string `json:"action"`
+	Action    string `json:"action"`
 	Timestamp string `json:"timestamp"`
 }
 
 type CreateEntityRequest struct {
-	Payload any `json:"payload"`
+	Payload         any              `json:"payload"`
 	Classifications []Classification `json:"classifications"`
 }
 
 type CreateActivityRequest struct {
-	Actor          string           `json:"actor"`
-	Agent          AgentContext     `json:"agent"`
-	Version        string           `json:"version"`
-	Activity       ActivityDetails  `json:"activity"`
-	UsedEntityIds  []string         `json:"usedEntityIds"`
+	Actor             string                `json:"actor"`
+	Agent             AgentContext          `json:"agent"`
+	Version           string                `json:"version"`
+	Activity          ActivityDetails       `json:"activity"`
+	UsedEntityIds     []string              `json:"usedEntityIds"`
 	GeneratedEntities []CreateEntityRequest `json:"generatedEntities"`
-	ObservedAt     string           `json:"observed_at"`
+	ObservedAt        string                `json:"observed_at"`
 }
-
 
 func postToProductAPI(payload CreateActivityRequest) error {
 	url := os.Getenv("PRODUCT_API_URL")
@@ -123,8 +123,11 @@ func main() {
 		}
 
 		classifications := []Classification{
+			{Name: "url", Value: story.URL},
 			{Name: "source", Value: story.Source},
 			{Name: "section", Value: story.Section},
+			{Name: "specificity", Value: "compound"},
+			{Name: "provider", Value: "progenitor"},
 		}
 		if story.HasVideo {
 			classifications = append(classifications, Classification{
@@ -134,27 +137,27 @@ func main() {
 		}
 
 		activity := CreateActivityRequest{
-			Actor:          agent,
+			Actor: agent,
 			Agent: AgentContext{
-            	ID:          agent,
-            	Name:        agent,
-            	Version:     version,
-            	AgentKind:   "automated",
-            	AgentMethod: "scrape+classify",
-            },
-			Version:        version,
-			Activity:       ActivityDetails{
-				Action: "StoryIngest",
+				ID:          agent,
+				Name:        agent,
+				Version:     version,
+				AgentKind:   "automated",
+				AgentMethod: "scrape+classify",
+			},
+			Version: version,
+			Activity: ActivityDetails{
+				Action:    "StoryIngest",
 				Timestamp: time.Now().Format(time.RFC3339),
 			},
-			UsedEntityIds:  []string{},
+			UsedEntityIds: []string{},
 			GeneratedEntities: []CreateEntityRequest{
 				{
-					Payload: story,
+					Payload:         story,
 					Classifications: classifications,
 				},
 			},
-			ObservedAt:     story.ReceivedAt,
+			ObservedAt: story.ReceivedAt,
 		}
 
 		debugLog("Posting story: %s", story.URL)
