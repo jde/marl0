@@ -89,6 +89,18 @@ config:
 	$(DC) config
 
 # ===============================
+# 🧩 LLM
+# ===============================
+
+llm-up:
+	@echo "🧠 Starting local LLM (nous-hermes)..."
+	ollama run nous-hermes
+
+llm-down:
+	@echo "🛑 Stopping local LLM..."
+	killall ollama || true
+
+# ===============================
 # 🧩 Kafka
 # ===============================
 
